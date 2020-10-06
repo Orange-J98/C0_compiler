@@ -95,9 +95,8 @@ public class WordAnalyze {
 		FileReader reader = new FileReader(file);
 		int length = (int) file.length();
 		char buf[] = new char[length + 1];
-		for (int i = 0; i < buf.length; i++) {
-			buf[i] = ' ';
-		}
+		buf[buf.length-1]=' ';
+		buf[buf.length-2]=' ';
 		reader.read(buf);
 		reader.close();
 		new WordAnalyze().analyze(buf);
