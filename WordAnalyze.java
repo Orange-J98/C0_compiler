@@ -27,8 +27,9 @@ public class WordAnalyze {
 			return false;
 	}
 
-	public static String removeZero(String str) {
-		int len = str.length(), i = 0;
+	public String removeZero(String str) {
+		int len = str.length();
+		int i = 0;
 		while (i < len && str.charAt(i) == '0') {
 			i++;
 		}
@@ -63,7 +64,6 @@ public class WordAnalyze {
 				if (token.equals("")) {
 					token = "0";
 				}
-//				int num=Integer.parseInt(token);
 				System.out.println("Int(" + token + ")");
 			} else if (ch == ':') {
 				ch = chs[++i];
@@ -96,7 +96,6 @@ public class WordAnalyze {
 		int length = (int) file.length();
 		char buf[] = new char[length + 1];
 		buf[buf.length-1]=' ';
-		buf[buf.length-2]=' ';
 		reader.read(buf);
 		reader.close();
 		new WordAnalyze().analyze(buf);
