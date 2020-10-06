@@ -3,7 +3,7 @@ import java.io.FileReader;
 
 public class WordAnalyze {
 	private String keyWord[] = { "BEGIN", "END", "FOR", "IF", "THEN", "ELSE" };
-	private char ch;
+	private char ch=' ';
 
 	boolean isKey(String str) {
 		for (int i = 0; i < keyWord.length; i++) {
@@ -37,7 +37,7 @@ public class WordAnalyze {
 
 	public void analyze(char[] chs) {
 		String token = "";
-		for (int i = 0; i < chs.length - 1; i++) {
+		for (int i = 0; i < chs.length; i++) {
 			ch = chs[i];
 			token = "";
 			if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
