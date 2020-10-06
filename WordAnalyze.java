@@ -90,7 +90,7 @@ public class WordAnalyze {
 	}
 
 	public static void main(String[] args) throws Exception {
-		File file = new File("C:\\Users\\jl\\Desktop\\data.txt");
+		File file = new File(args[0]);
 		FileReader reader = new FileReader(file);
 		int length = (int) file.length();
 		char buf[] = new char[length + 1];
