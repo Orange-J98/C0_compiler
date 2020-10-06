@@ -84,6 +84,7 @@ public class WordAnalyze {
 			} else if (ch == ')') {
 				System.out.println("RParenthesis");
 			} else {
+				System.out.println("Unknown");
 				break;
 			}
 		}
