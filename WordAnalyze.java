@@ -37,7 +37,7 @@ public class WordAnalyze {
 
 	public void analyze(char[] chs) {
 		String token = "";
-		for (int i = 0; i < chs.length; i++) {
+		for (int i = 0; i < chs.length - 1; i++) {
 			ch = chs[i];
 			token = "";
 			if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
@@ -60,8 +60,8 @@ public class WordAnalyze {
 				}
 				i--;
 				token = removeZero(token);
-				if(token.equals("")) {
-					token="0";
+				if (token.equals("")) {
+					token = "0";
 				}
 //				int num=Integer.parseInt(token);
 				System.out.println("Int(" + token + ")");
@@ -91,10 +91,13 @@ public class WordAnalyze {
 	}
 
 	public static void main(String[] args) throws Exception {
-		File file = new File(args[0]);
+		File file = new File("C:\\Users\\jl\\Desktop\\data.txt");
 		FileReader reader = new FileReader(file);
 		int length = (int) file.length();
 		char buf[] = new char[length + 1];
+		for (int i = 0; i < buf.length; i++) {
+			buf[i] = ' ';
+		}
 		reader.read(buf);
 		reader.close();
 		new WordAnalyze().analyze(buf);
