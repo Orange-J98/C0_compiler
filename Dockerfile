@@ -1,4 +1,5 @@
-FROM openjdk:13
+FROM openjdk:13-alpine
+COPY ./* /app/
 WORKDIR /app/
-COPY ./* /folder/
-RUN javac WordAnalyze.java
+RUN javac -d ./output ./WordAnalyze.java
+WORKDIR /app/output
