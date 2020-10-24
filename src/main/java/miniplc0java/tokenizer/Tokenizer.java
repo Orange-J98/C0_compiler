@@ -7,7 +7,6 @@ import miniplc0java.util.Pos;
 public class Tokenizer {
 
     private StringIter it;
-    private String keyWord[] = { "begin", "end", "var", "const", "print"};
     public Tokenizer(StringIter it) {
         this.it = it;
     }
@@ -77,25 +76,19 @@ public class Tokenizer {
             token +=it.nextChar();
         }
         Pos endpos = it.currentPos();
-
-        int temp=isKey(token);
-        if (temp>0) {
-            switch (temp){
-                case 1:
-                    return new Token(TokenType.Begin,token,startpos,endpos);
-                case 2:
-                    return new Token(TokenType.End,token,startpos,endpos);
-                case 3:
-                    return new Token(TokenType.Var,token,startpos,endpos);
-                case 4:
-                    return new Token(TokenType.Const,token,startpos,endpos);
-                case 5:
-                    return new Token(TokenType.Print,token,startpos,endpos);
-                default:
-                    return new Token(TokenType.Ident,token,startpos,endpos);
-            }
-        } else{
-            return new Token(TokenType.Ident,token,startpos,endpos);
+        switch (token) {
+            case "begin":
+                return new Token(TokenType.Begin, token, startpos, endpos);
+            case "end":
+                return new Token(TokenType.End, token, startpos, endpos);
+            case "var":
+                return new Token(TokenType.Var, token, startpos, endpos);
+            case "const":
+                return new Token(TokenType.Const, token, startpos, endpos);
+            case "print":
+                return new Token(TokenType.Print, token, startpos, endpos);
+            default:
+                return new Token(TokenType.Ident, token, startpos, endpos);
         }
     }
 
@@ -146,12 +139,5 @@ public class Tokenizer {
             i++;
         }
         return str.substring(i);
-    }
-    private int isKey(String str) {
-        for (int i = 0; i < keyWord.length; i++) {
-            if (keyWord[i].equals(str))
-                return (i+1);
-        }
-        return 0;
     }
 }
