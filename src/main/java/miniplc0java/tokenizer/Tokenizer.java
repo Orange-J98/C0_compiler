@@ -57,7 +57,8 @@ public class Tokenizer {
         if (token.equals("")) {
             token = "0";
         }
-        return new Token(TokenType.Uint,token,startpos1,endpos1);
+        int num = Integer.parseInt(token);
+        return new Token(TokenType.Uint,num,startpos1,endpos1);
     }
 
     private Token lexIdentOrKeyword() throws TokenizeError {
