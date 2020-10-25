@@ -238,7 +238,6 @@ public final class Analyser {
     //<变量声明>
     private void analyseVariableDeclaration() throws CompileError {
         // 变量声明 -> 变量声明语句*
-
         // 如果下一个 token 是 var 就继续
         while (nextIf(TokenType.Var) != null) {
             // 变量声明语句 -> 'var' 变量名 ('=' 表达式)? ';'
@@ -273,39 +272,25 @@ public final class Analyser {
     private void analyseStatementSequence() throws CompileError {
         // 语句序列 -> 语句*
         // 语句 -> 赋值语句 | 输出语句 | 空语句
-        boolean flag =false;
-        if(check(TokenType.Ident)||check(TokenType.Print)||check(TokenType.Semicolon)){
-            flag = true;
-        }
-        while(flag){
+        while (true) {
             // 如果下一个 token 是……
-            if (check(TokenType.Ident)){
+            var peeked = peek();
+            if (peeked.getTokenType() == TokenType.Ident) {
                 // 调用相应的分析函数
                 // 如果遇到其他非终结符的 FIRST 集呢？
                 analyseAssignmentStatement();
-                flag = true;
-            }else if(check(TokenType.Print)){
+            }else if(peeked.getTokenType() == TokenType.Print){
                 analyseOutputStatement();
-                flag = true;
-            }else if(check(TokenType.Semicolon)){
-                flag = true;
-                continue;
-            }else{
+            }else if(peeked.getTokenType() == TokenType.Semicolon){
+                expect(TokenType.Semicolon);
+            }
+            else {
                 // 都不是，摸了
-                flag=false;
+                break;
             }
         }
     }
 
-//    private void analyseStatement() throws CompileError {
-//        if(check(TokenType.Ident)){
-//            analyseAssignmentStatement();
-//        }else if(check(TokenType.Print)){
-//            analyseOutputStatement();
-//        }else{
-//            expect(TokenType.Semicolon);
-//        }
-//    }
 
     private int analyseConstantExpression() throws CompileError {
         // 常表达式 -> 符号? 无符号整数
