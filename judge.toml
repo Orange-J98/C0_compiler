@@ -1,0 +1,7 @@
+[jobs.opg]
+
+image = { source = "dockerfile", path = ".", tag = "my-pascal-lexer" }
+
+run = [
+  "java opg $input",
+]
