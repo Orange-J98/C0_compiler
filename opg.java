@@ -157,7 +157,7 @@ public class opg {
     }
 
     public static void main(String[] args) throws Exception {
-        File file = new File(args[0]);
+        File file = new File("C:\\Users\\Arno_ZH\\Desktop\\OPG\\src\\in.txt");
         FileReader reader = new FileReader(file);
         int length = (int) file.length();
         char buf[] = new char[length + 1];
