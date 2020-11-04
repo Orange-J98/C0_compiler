@@ -81,8 +81,13 @@ public class opg {
                     }
                 } else {
                     //规约失败
-                    System.out.println("RE");
-                    return -1;
+                    if(symbol.peek()=='('){
+                        System.out.println("E");
+                        return -1;
+                    }else {
+                        System.out.println("RE");
+                        return -1;
+                    }
                 }
             } else if (symbol.pop() == ')') {
                 if (symbol.pop() == 'E') {
@@ -120,7 +125,7 @@ public class opg {
                 while (!symbol.isEmpty()) {
                     int num =sp();
                     if(num==-1){
-                        break;
+                        return;
                     }
                 }
             } else if (judge(ch) == 1) {
@@ -146,7 +151,7 @@ public class opg {
         while (!symbol.isEmpty()) {
             int num =sp();
             if(num==-1){
-                break;
+                return;
             }
         }
     }
