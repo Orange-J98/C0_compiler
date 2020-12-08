@@ -1,6 +1,7 @@
 package tokenizer;
 import error.*;
 import  util.Pos;
+import java.util.regex.*;
 
 public class Tokenizer {
     private StringIter it;
@@ -37,8 +38,42 @@ public class Tokenizer {
     }
     //无符号整数或浮点数
     private Token UIntOrDouble() throws TokenizeError{
+        String token = "";
+        Pos startpos1 = it.currentPos();
+        while (Character.isDigit(it.peekChar())) {
+            token += it.nextChar();
+        }
+        boolean flag = false;
+        if(it.peekChar()=='.'){
+            flag =true;
+            token += it.nextChar();
+            while (Character.isDigit(it.peekChar())) {
+                token += it.nextChar();
+            }
+            if(it.peekChar()=='e'||it.peekChar()=='E'){
+                token+=it.nextChar();
+                if(it.peekChar()=='+'||it.peekChar()=='-'){
+                    token+=it.nextChar();
+                }
+                while (Character.isDigit(it.peekChar())) {
+                    token += it.nextChar();
+                }
+            }
+        }
 
+        Pos endpos1 = it.currentPos();
+        token = removeZero(token);
+        if (token.equals("")) {
+            token = "0";
+        }
 
+        if(flag){
+            double num = Double.parseDouble(token);
+            return new Token(TokenType.DOUBLE_LITERAL,num,startpos1,endpos1);
+        }else {
+            int num = Integer.parseInt(token);
+            return new Token(TokenType.UINT_LITERAL,num, startpos1, endpos1);
+        }
     }
 
     //识别关键字和标识符
@@ -76,10 +111,71 @@ public class Tokenizer {
     }
 
     private Token StringOrChar() throws TokenizeError{
-
+        String token = "";
+        Pos startpos1 =it.currentPos();
+        //字符串String
+        if (it.peekChar() == '\"'){
+            token += it.nextChar();
+            while(it.peekChar()!='\"'){
+                token = getEscapeSequence(token);
+            }
+            if (it.peekChar()=='\"'){
+                token += it.nextChar();
+                Pos endpos1 = it.currentPos();
+                return new Token(TokenType.STRING_LITERAL,token,startpos1,endpos1);
+            }else{
+                throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+            }
+        }else if(it.peekChar() == '\''){
+            //char字符串
+            token += it.nextChar();
+            while(it.peekChar()!='\''){
+                token = getEscapeSequence(token);
+            }
+            if (it.peekChar()=='\''){
+                token += it.nextChar();
+                Pos endpos1 = it.currentPos();
+                return new Token(TokenType.CHAR_LITERAL,token,startpos1,endpos1);
+            }else{
+                throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+            }
+        }else{
+            throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+        }
     }
-    private Token lexComent() throws TokenizeError{
+    //识别转义字符
+    private String getEscapeSequence(String token) throws TokenizeError {
+        if(it.peekChar()=='\\'){
+            token+=it.nextChar();
+            if(it.peekChar()=='\\'||it.peekChar()=='\"'||it.peekChar()=='\''||it.peekChar()=='n'||it.peekChar()=='r'||it.peekChar()=='t'){
+                token+=it.nextChar();
+                return token;
+            }else{
+                throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+            }
+        }
+        token += it.nextChar();
+        return token;
+    }
 
+    //识别注释
+    private Token lexComent() throws TokenizeError{
+        String token = "";
+        Pos startpos1 = it.currentPos();
+        token+=it.nextChar();
+        if(it.peekChar()=='/'){
+            token+=it.nextChar();
+        }else{
+            throw new TokenizeError(ErrorCode.InvalidInput, it.previousPos());
+        }
+        while(it.peekChar()!='\n'){
+            token+=it.nextChar();
+        }
+        if(it.peekChar()=='\n'){
+            token+=it.nextChar();
+        }
+        Pos endpos1 = it.currentPos();
+        return new Token(TokenType.COMMENT,token,startpos1,endpos1);
     }
 
     //识别常量
