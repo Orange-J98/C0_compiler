@@ -261,9 +261,6 @@ public final class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
         }
     }
-
-    //block_stmt -> '{' stmt* '}'
-
     // # 语句
 //    stmt ->
 //    expr_stmt
@@ -275,27 +272,88 @@ public final class Analyser {
 //    | return_stmt
 //    | block_stmt
 //    | empty_stmt
-
-//    expr_stmt -> expr ';'
-
-//    decl_stmt -> let_decl_stmt | const_decl_stmt
-//        let_decl_stmt -> 'let' IDENT ':' ty ('=' expr)? ';'
-//        const_decl_stmt -> 'const' IDENT ':' ty '=' expr ';'
-
-//    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
-//    while_stmt -> 'while' expr block_stmt
-//    break_stmt -> 'break' ';'
-//    continue_stmt -> 'continue' ';'
-//    return_stmt -> 'return' expr? ';'
-//    block_stmt -> '{' stmt* '}'
-//    empty_stmt -> ';'
     private void analyseStmt() throws CompileError{
-        /** 还没实现！*/
+        if(checkNextifExpr()){
+            //    expr_stmt -> expr ';'
+            analyseExpr();
+            expect(TokenType.SEMICOLON);
+        }else if (check(TokenType.LET_KW)||check(TokenType.CONST_KW)){
+            //    decl_stmt -> let_decl_stmt | const_decl_stmt
+            //        let_decl_stmt -> 'let' IDENT ':' ty ('=' expr)? ';'
+            //        const_decl_stmt -> 'const' IDENT ':' ty '=' expr ';'
+            analyseDeclStmt();
+        }else if (check(TokenType.IF_KW)){
+            //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
+            analyseIfStmt();
+        }else if(check(TokenType.WHILE_KW)){
+            //    while_stmt -> 'while' expr block_stmt
+            analyseWhile();
+        }else if(check(TokenType.BREAK_KW)){
+            //    break_stmt -> 'break' ';'
+            analyseBreakStmt();
+        }else if(check(TokenType.CONTINUE_KW)){
+            //    continue_stmt -> 'continue' ';'
+            analyseContinueStmt();
+        }else if (check(TokenType.RETURN_KW)){
+            //    return_stmt -> 'return' expr? ';'
+            analyseReturnStmt();
+        }else if (check(TokenType.L_BRACE)){
+            //    block_stmt -> '{' stmt* '}'
+            analyseBlockStmt();
+        }else if(nextIf(TokenType.SEMICOLON)!=null){
+            //    empty_stmt -> ';'
+            return;
+        }else{
+            throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
+        }
+    }
+
+    //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
+    private void analyseIfStmt() throws CompileError{
+        expect(TokenType.IF_KW);
+        analyseExpr();
+        analyseBlockStmt();
+        while (check(TokenType.ELSE_KW)){
+            next();
+            if (check(TokenType.IF_KW)){
+                next();
+                analyseExpr();
+                analyseBlockStmt();
+            }else{
+                analyseBlockStmt();
+                break;
+            }
+        }
+
+    }
+    //    while_stmt -> 'while' expr block_stmt
+    private void analyseWhile() throws CompileError{
+        expect(TokenType.WHILE_KW);
+        analyseExpr();
+        analyseBlockStmt();
+    }
+    //    break_stmt -> 'break' ';'
+    private void analyseBreakStmt() throws CompileError{
+        expect(TokenType.BREAK_KW);
+        expect(TokenType.SEMICOLON);
+    }
+    //    continue_stmt -> 'continue' ';'
+    private void analyseContinueStmt() throws CompileError{
+        expect(TokenType.CONTINUE_KW);
+        expect(TokenType.SEMICOLON);
+    }
+    //    return_stmt -> 'return' expr? ';'
+    private void analyseReturnStmt() throws CompileError{
+        expect(TokenType.RETURN_KW);
+        if (checkNextifExpr()){
+            analyseExpr();
+        }
+        expect(TokenType.SEMICOLON);
     }
 
     //    decl_stmt -> let_decl_stmt | const_decl_stmt
-//        let_decl_stmt -> 'let' IDENT ':' ty ('=' expr)? ';'
-//        const_decl_stmt -> 'const' IDENT ':' ty '=' expr ';'
+    //        let_decl_stmt -> 'let' IDENT ':' ty ('=' expr)? ';'
+    //        const_decl_stmt -> 'const' IDENT ':' ty '=' expr ';'
     private void analyseDeclStmt() throws CompileError{
         if (check(TokenType.LET_KW)){
             analyseLetDeclStmt();
@@ -332,7 +390,7 @@ public final class Analyser {
         while(checkNextIfStmt()){
             analyseStmt();
         }
-        expect(TokenType.L_BRACE);
+        expect(TokenType.R_BRACE);
     }
     private boolean checkNextIfStmt() throws CompileError{
         if(checkNextifExpr()){
@@ -341,21 +399,13 @@ public final class Analyser {
         var nextToken = peek();
         switch (nextToken.getTokenType()){
             case LET_KW:
-                return true;
+            case L_BRACE:
             case CONST_KW:
-                return true;
             case IF_KW:
-                return true;
             case WHILE_KW:
-                return true;
             case BREAK_KW:
-                return true;
             case CONTINUE_KW:
-                return true;
             case RETURN_KW:
-                return true;
-            case L_PAREN:
-                return true;
             case SEMICOLON:
                 return true;
             default:
@@ -389,21 +439,95 @@ public final class Analyser {
 //    ident_expr -> IDENT
 //    group_expr -> '(' expr ')'
     // ## 左值表达式
-    private boolean checkNextifExpr() throws CompileError{
+
+//    优先级从高到低
+//    运算符	            结合性
+//    括号表达式	        -
+//    函数调用	        -
+//    前置               -	-
+//    as	            -
+//    * /	            左到右
+//    + -	            左到右
+//    > < >= <= == !=	左到右
+//    =	右到左
+    private void analyseExpr() throws CompileError{
+         if (check(TokenType.IDENT)){
+             next();
+             if (check(TokenType.ASSIGN)){
+                 next();
+                 /**说明这里是一个赋值语句，下面是对右值的分析，右值不可能是比较式，所以至少从加减法开始*/
+                 analyseAddMinusExpr();
+             }else if(check(TokenType.L_PAREN)){
+                 next();
+
+                 /**说明这是一个函数说明语句，对函数的一个调用，后面可能跟着运算符，所以要判断一下*/
+                 if (check(TokenType.PLUS)||check(TokenType.MINUS)){
+                     analyseMultiDivExpr();
+                 }else if (check(TokenType.MUL)||check(TokenType.DIV)){
+                     analyseTypeChangeExpr();
+                 }else if (check(TokenType.AS_KW)){
+                     analyseTy();
+                 }
+             }
+         }else{
+             analyseCompareExpr();
+         }
+    }
+
+    private void analyseCompareExpr() throws CompileError{
+        analyseAddMinusExpr();
+        while (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
+            next();
+            analyseAddMinusExpr();
+        }
+    }
+
+    private void analyseAddMinusExpr() throws CompileError{
+        analyseMultiDivExpr();
+        while (check(TokenType.PLUS)||check(TokenType.MINUS)){
+            next();
+            analyseMultiDivExpr();
+        }
+    }
+
+    private void analyseMultiDivExpr() throws  CompileError{
+        analyseTypeChangeExpr();
+        while (check(TokenType.MUL)||check(TokenType.DIV)){
+            next();
+            analyseTypeChangeExpr();
+        }
+    }
+
+    private void analyseTypeChangeExpr() throws CompileError{
+        analyseFactor();
+        while (check(TokenType.AS_KW)){
+            analyseTy();
+        }
+    }
+
+    private void analyseFactor() throws CompileError{
+        if (check(TokenType.MINUS)){
+            next();
+        }
+        if (isFunc()){
+            analyseCallExpr();
+        }else if (check())
+    }
+
+    private void analyseCallExpr() throws CompileError{
+
+    }
+
+
+    private boolean  checkNextifExpr() throws CompileError{
         var nextToken = peek();
         switch (nextToken.getTokenType()){
             case MINUS:
-                return true;
             case IDENT:
-                return true;
             case UINT_LITERAL:
-                return true;
             case DOUBLE_LITERAL:
-                return true;
             case STRING_LITERAL:
-                return true;
             case CHAR_LITERAL:
-                return true;
             case L_PAREN:
                 return true;
             default:
