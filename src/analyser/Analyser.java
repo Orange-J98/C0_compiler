@@ -17,16 +17,31 @@ import java.util.*;
 public final class Analyser {
 
     Tokenizer tokenizer;
+    /** 指令集 */
     ArrayList<Instruction> instructions;
-
     /** 当前偷看的 token */
     Token peekedToken = null;
 
-    /** 符号表 */
-    HashMap<String, SymbolEntry> symbolTable = new HashMap<>();
+    /** 局部变量表 */
+    HashMap<String, SymbolEntry> localSymbolTable = new HashMap<>();
+    /** 参数表 */
+    HashMap<String,SymbolEntry> paramTable = new HashMap<>();
+    /** 全局变量表 */
+    HashMap<String,SymbolEntry> globalSymbolTable = new HashMap<>();
+    /** 函数表 */
+    HashMap<String,FuncEntry> funcTable = new HashMap<>();
 
     /** 下一个变量的栈偏移 */
     int nextOffset = 0;
+    /** 下一个局部变量的栈偏移 */
+    int nextLocOff = 0;
+    /** 下一个函数的栈偏移 */
+    int nextFuncOff = 0;
+    /** 下一个参数变量的栈偏移 */
+    int nextParamOff = 0;
+
+    /** 判断当前状态实在函数体中还是函数体外 */
+    boolean isInFunc = false;
 
     public Analyser(Tokenizer tokenizer) {
         this.tokenizer = tokenizer;
@@ -35,6 +50,7 @@ public final class Analyser {
 
     public List<Instruction> analyse() throws CompileError {
         analyseProgram();
+        /*TODO:需要重构返回值*/
         return instructions;
     }
 
@@ -119,7 +135,15 @@ public final class Analyser {
     private int getNextVariableOffset() {
         return this.nextOffset++;
     }
-
+    private int getNextLocOff(){
+        return this.nextLocOff++;
+    }
+    private int getNextFuncOff(){
+        return this.nextFuncOff++;
+    }
+    private int getNextParamOff(){
+        return this.nextParamOff++;
+    }
     /**
      * 添加一个符号
      *
@@ -129,12 +153,20 @@ public final class Analyser {
      * @param curPos        当前 token 的位置（报错用）
      * @throws AnalyzeError 如果重复定义了则抛异常
      */
-    private void addSymbol(String name, boolean isInitialized, boolean isConstant, Pos curPos) throws AnalyzeError {
-        if (this.symbolTable.get(name) != null) {
+    private void addLocalSymbol(String name, boolean isInitialized, boolean isConstant, Pos curPos) throws AnalyzeError {
+        if (this.localSymbolTable.get(name) != null) {
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration, curPos);
         } else {
-            this.symbolTable.put(name, new SymbolEntry(isConstant, isInitialized, getNextVariableOffset()));
+            this.localSymbolTable.put(name, new SymbolEntry(isConstant, isInitialized, getNextVariableOffset()));
         }
+    }
+    private void addFuncSymbol(String name, int func_name,int ret_num,int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions,Pos curPos)throws AnalyzeError{
+        if (this.funcTable.get(name)!=null){
+            throw new AnalyzeError(ErrorCode.DuplicateDeclaration,curPos);
+        }else {
+            this.funcTable.put(name,new FuncEntry(func_name,ret_num,param_num,locVarNum,bodyCnt,instructions));
+        }
+
     }
 
     /**
@@ -144,8 +176,8 @@ public final class Analyser {
      * @param curPos 当前位置（报错用）
      * @throws AnalyzeError 如果未定义则抛异常
      */
-    private void initializeSymbol(String name, Pos curPos) throws AnalyzeError {
-        var entry = this.symbolTable.get(name);
+    private void initializeLocalSymbol(String name, Pos curPos) throws AnalyzeError {
+        var entry = this.localSymbolTable.get(name);
         if (entry == null) {
             throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
         } else {
@@ -162,7 +194,7 @@ public final class Analyser {
      * @throws AnalyzeError
      */
     private int getOffset(String name, Pos curPos) throws AnalyzeError {
-        var entry = this.symbolTable.get(name);
+        var entry = this.localSymbolTable.get(name);
         if (entry == null) {
             throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
         } else {
@@ -179,7 +211,7 @@ public final class Analyser {
      * @throws AnalyzeError
      */
     private boolean isConstant(String name, Pos curPos) throws AnalyzeError {
-        var entry = this.symbolTable.get(name);
+        var entry = this.localSymbolTable.get(name);
         if (entry == null) {
             throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
         } else {
@@ -197,7 +229,7 @@ public final class Analyser {
         // 程序
         //item -> function | decl_stmt
         //program -> item*
-        while(check(TokenType.EOF) != true){
+        while(!check(TokenType.EOF)){
             analyseItem();
         }
         expect(TokenType.EOF);
@@ -234,6 +266,7 @@ public final class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
         }
     }
+
     //# 函数
     //function_param -> 'const'? IDENT ':' ty
     //function_param_list -> function_param (',' function_param)*
@@ -255,7 +288,14 @@ public final class Analyser {
     // ## 类型
     //ty -> IDENT
     private void analyseTy() throws CompileError{
-        if(Objects.requireNonNull(nextIf(TokenType.IDENT)).getValue().equals("void")|| Objects.requireNonNull(nextIf(TokenType.IDENT)).getValue().equals("int")){
+        //c0 有一个十分简单的类型系统。在基础 C0 中你会用到的类型有两种：
+        //
+        //64 位有符号整数 int
+        //空类型 void
+        //扩展 C0 增加了一种类型：
+        //
+        //64 位 IEEE-754 浮点数 double
+        if(Objects.requireNonNull(nextIf(TokenType.IDENT)).getValue().equals("void")|| Objects.requireNonNull(nextIf(TokenType.IDENT)).getValue().equals("int")||Objects.requireNonNull(nextIf(TokenType.IDENT)).getValue().equals("double")){
             return;
         }else{
             throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
@@ -455,18 +495,21 @@ public final class Analyser {
              next();
              if (check(TokenType.ASSIGN)){
                  next();
-                 /**说明这里是一个赋值语句，下面是对右值的分析，右值不可能是比较式，所以至少从加减法开始*/
+                 /*说明这里是一个赋值语句，下面是对右值的分析，右值不可能是比较式，所以至少从加减法开始*/
+//                 赋值表达式是由 左值表达式、等号 =、表达式 组成的表达式。赋值表达式的值类型永远是 void（即不能被使用）。
+//                 左值表达式是一个局部或全局的变量名。
+//                 赋值表达式的语义是将右侧表达式的计算结果赋给左侧表示的值。
                  analyseAddMinusExpr();
              }else if(check(TokenType.L_PAREN)){
                  next();
-
-                 /**说明这是一个函数说明语句，对函数的一个调用，后面可能跟着运算符，所以要判断一下*/
-                 if (check(TokenType.PLUS)||check(TokenType.MINUS)){
-                     analyseMultiDivExpr();
-                 }else if (check(TokenType.MUL)||check(TokenType.DIV)){
-                     analyseTypeChangeExpr();
-                 }else if (check(TokenType.AS_KW)){
-                     analyseTy();
+                 /*说明这是一个函数说明语句，对函数的一个调用，后面可能跟着运算符，所以要判断一下*/
+                 analyseIdent();
+             }else{
+                 if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
+                     next();
+                     analyseAddMinusExpr();
+                 }else {
+                     analyseIdent();
                  }
              }
          }else{
@@ -474,9 +517,24 @@ public final class Analyser {
          }
     }
 
+    private void analyseIdent() throws CompileError {
+        if(check(TokenType.PLUS)||check(TokenType.MINUS)){
+            next();
+            analyseAddMinusExpr();
+        }else if (check(TokenType.MUL)||check(TokenType.DIV)){
+            next();
+            analyseMultiDivExpr();
+        }else if (check(TokenType.AS_KW)){
+            next();
+            analyseTy();
+        }else{
+            throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
+        }
+    }
+
     private void analyseCompareExpr() throws CompileError{
         analyseAddMinusExpr();
-        while (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
+        if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
             next();
             analyseAddMinusExpr();
         }
@@ -500,7 +558,9 @@ public final class Analyser {
 
     private void analyseTypeChangeExpr() throws CompileError{
         analyseFactor();
+        /*或许不能用while*/
         while (check(TokenType.AS_KW)){
+            next();
             analyseTy();
         }
     }
@@ -509,16 +569,27 @@ public final class Analyser {
         if (check(TokenType.MINUS)){
             next();
         }
-        if (isFunc()){
-            analyseCallExpr();
-        }else if (check())
+        if (check(TokenType.L_PAREN)){
+            next();
+            analyseAddMinusExpr();
+            expect(TokenType.R_PAREN);
+        }else if (check(TokenType.UINT_LITERAL)||check(TokenType.DOUBLE_LITERAL)||check(TokenType.STRING_LITERAL)||check(TokenType.CHAR_LITERAL)){
+            next();
+        }else if (check(TokenType.IDENT)){
+            next();
+            if (check(TokenType.L_PAREN)){
+                next();
+                if (!check(TokenType.R_PAREN)){
+                    analyseAddMinusExpr();
+                    while (nextIf(TokenType.COMMA)!=null){
+                        analyseAddMinusExpr();
+                    }
+                }else{
+                    next();
+                }
+            }
+        }
     }
-
-    private void analyseCallExpr() throws CompileError{
-
-    }
-
-
     private boolean  checkNextifExpr() throws CompileError{
         var nextToken = peek();
         switch (nextToken.getTokenType()){
