@@ -114,13 +114,18 @@ public class App {
                 return;
             }
             //转换成二进制！
-            int [] maigicVersion ={0x72,0x30,0x3b,0x3e,0,0,0,0x01};
+            int [] maigicVersion ={0x72,0x30,0x3b,0x3e,0x0,0x0,0x0,0x01};
             for (int num:maigicVersion){
                 Binary.append(toBinary_8(num));
             }
+
             Binary.append(toBinary_32(analyzer.getGlobalCounts()));
             HashMap<String,SymbolEntry> globalTable= analyzer.getGlobalSymbolTable();
-            for(SymbolEntry tempGlobalEntry:globalTable.values()){
+            ArrayList<String> funcName = analyzer.getFuncName();
+            ArrayList<String> globalName = analyzer.getGlobalName();
+
+            for(String tempGlobalName:globalName){
+                SymbolEntry tempGlobalEntry = globalTable.get(tempGlobalName);
                 if (tempGlobalEntry.isConstant()){
                     Binary.append(toBinary_8(1));
                 }else{
@@ -133,8 +138,10 @@ public class App {
                     Binary.append(StrToBinary(tempGlobalEntry.getGlobal_value()));
                 }
             }
+
             Binary.append(toBinary_32(funcTable.size()));
-            for (FuncEntry funcEntry:funcTable.values()){
+            for (String tempFuncName:funcName){
+                FuncEntry funcEntry = funcTable.get(tempFuncName);
                 Binary.append(toBinary_32(funcEntry.getFunc_name()));
                 Binary.append(toBinary_32(funcEntry.getRet_num()));
                 Binary.append(toBinary_32(funcEntry.getParam_num()));
