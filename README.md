@@ -1,2 +1,0 @@
-# WordAnalyze
-Compile project
