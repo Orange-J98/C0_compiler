@@ -706,175 +706,180 @@ public final class Analyser {
 
     /** 表达式部分 */
     private void analyseExpr() throws CompileError{
-         if (check(TokenType.IDENT)){
-             var nameToken = expect(TokenType.IDENT);
-             String name =(String) nameToken.getValue();
-             if (nextIf(TokenType.ASSIGN)!=null){
-                 //这里是赋值语句的左值！
-                 if (isInFunc){
-                     int localOff = localSymbolTable.get(name).getStackOffset();
-                     if (localSymbolTable.get(name)==null){
-                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                     }
-                     localInstructions.add(new Instruction(Operation.loca, localOff));
-                 }else {
-                     int globalOff;
-                     if (globalSymbolTable.get(name)==null){
-                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                     }
-                     globalOff = globalSymbolTable.get(name).getStackOffset();
-                     globalInstructions.add(new Instruction(Operation.globa,globalOff));
-                 }
-                 /*说明这里是一个赋值语句，下面是对右值的分析，右值不可能是比较式，所以至少从加减法开始*/
+        if (check(TokenType.IDENT)){
+            var nameToken = expect(TokenType.IDENT);
+            String name =(String) nameToken.getValue();
+            if (nextIf(TokenType.ASSIGN)!=null){
+                //这里是赋值语句的左值！
+
+                if (isInFunc){
+                    int localOff = localSymbolTable.get(name).getStackOffset();
+
+                    if (localSymbolTable.get(name)==null){
+                        throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                    }
+                    localSymbolTable.get(name).setInitialized(true);
+                    localInstructions.add(new Instruction(Operation.loca, localOff));
+                }else {
+                    int globalOff;
+
+                    if (globalSymbolTable.get(name)==null){
+                        throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                    }
+                    globalSymbolTable.get(name).setInitialized(true);
+                    globalOff = globalSymbolTable.get(name).getStackOffset();
+                    globalInstructions.add(new Instruction(Operation.globa,globalOff));
+                }
+                /*说明这里是一个赋值语句，下面是对右值的分析，右值不可能是比较式，所以至少从加减法开始*/
 //                 赋值表达式是由 左值表达式、等号 =、表达式 组成的表达式。赋值表达式的值类型永远是 void（即不能被使用）。
 //                 左值表达式是一个局部或全局的变量名。
 //                 赋值表达式的语义是将右侧表达式的计算结果赋给左侧表示的值。
-                 //这里是赋值语句的右值
-                 //赋值的右值还可能是函数，TODO:但是函数一定要有返回值！！！这里标准库函数没法验证
-                 if (check(TokenType.L_PAREN)){
-                     next();
-                     int funcOff;
-                     var funcSymbol = funcTable.get(name);
-                     if (funcSymbol == null){
-                         /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
-                         boolean isStd= isStandardFunc(name,false);
-                         if (!isStd){
-                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                         }
-                     }else {
-                         //不是标准库函数，进行栈处理
-                         if (isInFunc) {
-                             int ret_num = funcSymbol.getRet_num();
-                             localInstructions.add(new Instruction(Operation.stackalloc,ret_num));
-                         } else {
-                             throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-                         }
-                     }
-                     //说明不是标准库函数
-                     if (funcSymbol!=null){
-                         //进行参数处理！
-                         //对表达式进行分析;对于函数参数的空式子不用popn
-                         int paramNum = funcSymbol.getParam_num();
-                         while (paramNum-->0) {
-                             analyseEmptyExpr();
-                         }
-                         funcOff = funcSymbol.getFuncOffset();
-                         localInstructions.add(new Instruction(Operation.call,funcOff));
-                         int ret_num = funcSymbol.getRet_num();
-                         if (ret_num>0) {
-                             localInstructions.add(new Instruction(Operation.store_64, ret_num));
-                         }else {
-                             throw new AnalyzeError(ErrorCode.NoEnd,peek().getStartPos());
-                         }
-                     }
-                     expect(TokenType.R_PAREN);
-                 }else {
-                     analyseAddMinusExpr();
-                     /* 对于赋值语句来说这里需要存值！ */
-                     if (isInFunc) {
-                         localInstructions.add(new Instruction(Operation.store_64));
-                     } else {
-                         globalInstructions.add(new Instruction(Operation.store_64));
-                     }
-                 }
-             }else if(nextIf(TokenType.L_PAREN)!=null){
-                 /*说明这是一个函数说明语句，对函数的一个调用，后面可能跟着运算符，所以要判断一下*/
-                 /*这里的EmptyExpr并不是空语句 */
-                 /*就单独一个函数式的情况*/
-                 int funcOff;
-                 var funcSymbol = funcTable.get(name);
-                 if (funcSymbol == null){
-                     /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
-                     boolean isStd= isStandardFunc(name,true);
-                     if (!isStd){
-                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                     }
-                 }else {
-                     //不是标准库函数，进行栈处理
-                     if (isInFunc) {
-                         int ret_num = funcSymbol.getRet_num();
-                         localInstructions.add(new Instruction(Operation.stackalloc,ret_num));
-                     } else {
-                         throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-                     }
-                 }
-                 //说明不是标准库函数
-                 if (funcSymbol!=null){
-                     //进行参数处理！
-                     //对表达式进行分析;对于函数参数的空式子不用popn
-                     int paramNum = funcSymbol.getParam_num();
-                     while (paramNum-->0) {
-                         analyseEmptyExpr();
-                     }
-                     funcOff = funcSymbol.getFuncOffset();
-                     localInstructions.add(new Instruction(Operation.call,funcOff));
-                     int ret_num = funcSymbol.getRet_num();
-                     if (ret_num>0) {
-                         localInstructions.add(new Instruction(Operation.popn, ret_num));
-                     }
-                 }
-                 expect(TokenType.R_PAREN);
-             }else{
-                 //这里说明这个语句是一个空语句，并不是赋值语句或者其他；仅仅是一个空语句，类似 b+1;这种
-                 if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
-                     //这里是一个判断语句；
-                     //实现一个判断的空语句
-                     var CompareSymbol =next();
-                     analyseAddMinusExpr();
-                     if (isInFunc){
-                         localInstructions.add(new Instruction(Operation.cmp_i));
-                     }else {
-                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                     }
-                     switch (CompareSymbol.getTokenType()){
-                         case EQ:
-                             //如果!=则没什么处理
-                             localInstructions.add(new Instruction(Operation.not));
-                             break;
-                         case LT:
-                             localInstructions.add(new Instruction(Operation.set_lt));
-                             break;
-                         case GT:
-                             localInstructions.add(new Instruction(Operation.set_gt));
-                             break;
-                         case LE:
-                             localInstructions.add(new Instruction(Operation.set_gt));
-                             localInstructions.add(new Instruction(Operation.not));
-                             break;
-                         case GE:
-                             localInstructions.add(new Instruction(Operation.set_lt));
-                             localInstructions.add(new Instruction(Operation.not));
-                             break;
-                         default:
-                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                //这里是赋值语句的右值
+                //赋值的右值还可能是函数，TODO:但是函数一定要有返回值！！！这里标准库函数没法验证
+                if (check(TokenType.L_PAREN)){
+                    next();
+                    int funcOff;
+                    var funcSymbol = funcTable.get(name);
+                    if (funcSymbol == null){
+                        /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
+                        boolean isStd= isStandardFunc(name,false);
+                        if (!isStd){
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                        }
+                    }else {
+                        //不是标准库函数，进行栈处理
+                        if (isInFunc) {
+                            int ret_num = funcSymbol.getRet_num();
+                            localInstructions.add(new Instruction(Operation.stackalloc,ret_num));
+                        } else {
+                            throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
+                        }
+                    }
+                    //说明不是标准库函数
+                    if (funcSymbol!=null){
+                        //进行参数处理！
+                        //对表达式进行分析;对于函数参数的空式子不用popn
+                        int paramNum = funcSymbol.getParam_num();
+                        while (paramNum-->0) {
+                            analyseEmptyExpr();
+                        }
+                        funcOff = funcSymbol.getFuncOffset();
+                        localInstructions.add(new Instruction(Operation.call,funcOff));
+                        int ret_num = funcSymbol.getRet_num();
+                        if (ret_num>0) {
+                            localInstructions.add(new Instruction(Operation.store_64, ret_num));
+                        }else {
+                            throw new AnalyzeError(ErrorCode.NoEnd,peek().getStartPos());
+                        }
+                    }
+                    expect(TokenType.R_PAREN);
+                }else {
+                    analyseAddMinusExpr();
+                    /* 对于赋值语句来说这里需要存值！ */
+                    if (isInFunc) {
+                        localInstructions.add(new Instruction(Operation.store_64));
+                    } else {
+                        globalInstructions.add(new Instruction(Operation.store_64));
+                    }
+                }
+            }else if(nextIf(TokenType.L_PAREN)!=null){
+                /*说明这是一个函数说明语句，对函数的一个调用，后面可能跟着运算符，所以要判断一下*/
+                /*这里的EmptyExpr并不是空语句 */
+                /*就单独一个函数式的情况*/
+                int funcOff;
+                var funcSymbol = funcTable.get(name);
+                if (funcSymbol == null){
+                    /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
+                    boolean isStd= isStandardFunc(name,true);
+                    if (!isStd){
+                        throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                    }
+                }else {
+                    //不是标准库函数，进行栈处理
+                    if (isInFunc) {
+                        int ret_num = funcSymbol.getRet_num();
+                        localInstructions.add(new Instruction(Operation.stackalloc,ret_num));
+                    } else {
+                        throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
+                    }
+                }
+                //说明不是标准库函数
+                if (funcSymbol!=null){
+                    //进行参数处理！
+                    //对表达式进行分析;对于函数参数的空式子不用popn
+                    int paramNum = funcSymbol.getParam_num();
+                    while (paramNum-->0) {
+                        analyseEmptyExpr();
+                    }
+                    funcOff = funcSymbol.getFuncOffset();
+                    localInstructions.add(new Instruction(Operation.call,funcOff));
+                    int ret_num = funcSymbol.getRet_num();
+                    if (ret_num>0) {
+                        localInstructions.add(new Instruction(Operation.popn, ret_num));
+                    }
+                }
+                expect(TokenType.R_PAREN);
+            }else{
+                //这里说明这个语句是一个空语句，并不是赋值语句或者其他；仅仅是一个空语句，类似 b+1;这种
+                if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
+                    //这里是一个判断语句；
+                    //实现一个判断的空语句
+                    var CompareSymbol =next();
+                    analyseAddMinusExpr();
+                    if (isInFunc){
+                        localInstructions.add(new Instruction(Operation.cmp_i));
+                    }else {
+                        throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                    }
+                    switch (CompareSymbol.getTokenType()){
+                        case EQ:
+                            //如果!=则没什么处理
+                            localInstructions.add(new Instruction(Operation.not));
+                            break;
+                        case LT:
+                            localInstructions.add(new Instruction(Operation.set_lt));
+                            break;
+                        case GT:
+                            localInstructions.add(new Instruction(Operation.set_gt));
+                            break;
+                        case LE:
+                            localInstructions.add(new Instruction(Operation.set_gt));
+                            localInstructions.add(new Instruction(Operation.not));
+                            break;
+                        case GE:
+                            localInstructions.add(new Instruction(Operation.set_lt));
+                            localInstructions.add(new Instruction(Operation.not));
+                            break;
+                        default:
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
 
-                     }
-                     localInstructions.add(new Instruction(Operation.popn,1));
-                 }else {
-                     //这里是一个空的运算式
-                     if (isInFunc){
-                         int localOff;
-                         if (localSymbolTable.get(name)==null){
-                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                         }
-                         localOff = localSymbolTable.get(name).getStackOffset();
-                         localInstructions.add(new Instruction(Operation.loca, localOff));
-                         localInstructions.add(new Instruction(Operation.load_64));
-                     }else {
-                         //全局没有空运算式;
-                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                     }
-                     analyseEmptyExpr();
-                     localInstructions.add(new Instruction(Operation.popn,1));
-                 }
-             }
-         }else{
-             //这里也是单独一个计算式，不过可能第一个不是变量，而是一个数字；
-             analyseCompareExpr(true);
-             if (isInFunc){
-                 localInstructions.add(new Instruction(Operation.popn,1));
-             }
-         }
+                    }
+                    localInstructions.add(new Instruction(Operation.popn,1));
+                }else {
+                    //这里是一个空的运算式
+                    if (isInFunc){
+                        int localOff;
+                        if (localSymbolTable.get(name)==null){
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                        }
+                        localOff = localSymbolTable.get(name).getStackOffset();
+                        localInstructions.add(new Instruction(Operation.loca, localOff));
+                        localInstructions.add(new Instruction(Operation.load_64));
+                    }else {
+                        //全局没有空运算式;
+                        throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                    }
+                    analyseEmptyExpr();
+                    localInstructions.add(new Instruction(Operation.popn,1));
+                }
+            }
+        }else{
+            //这里也是单独一个计算式，不过可能第一个不是变量，而是一个数字；
+            analyseCompareExpr(true);
+            if (isInFunc){
+                localInstructions.add(new Instruction(Operation.popn,1));
+            }
+        }
     }
 
     //空式子和函数参数式子中的运算式
@@ -915,7 +920,7 @@ public final class Analyser {
         }
     }
 
-        //判断语句
+    //判断语句
     private void analyseCompareExpr(boolean isEmptyStat) throws CompileError{
         analyseAddMinusExpr();
         if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
@@ -1179,13 +1184,14 @@ public final class Analyser {
     }
     //处理标准库函数
     private boolean isStandardFunc(String name,boolean EmptyNoRet) throws CompileError{
-        addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-        int globalOff = globalSymbolTable.size()-1;
+        int globalOff;
         switch (name){
             case "getint":
             case "getchar":
                 if (isInFunc){
+                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
                     localInstructions.add(new Instruction(Operation.stackalloc,1));
+                    globalOff = globalSymbolTable.size()-1;
                     localInstructions.add(new Instruction(Operation.callname,globalOff));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
@@ -1194,7 +1200,9 @@ public final class Analyser {
 //                        localInstructions.add(new Instruction(Operation.store_64));
 //                    }
                 }else{
+                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
                     globalInstructions.add(new Instruction(Operation.stackalloc,1));
+                    globalOff = globalSymbolTable.size()-1;
                     globalInstructions.add(new Instruction(Operation.callname,globalOff));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1214,6 +1222,8 @@ public final class Analyser {
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.stackalloc,0));
                     analyseAddMinusExpr();
+                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                    globalOff = globalSymbolTable.size()-1;
                     localInstructions.add(new Instruction(Operation.callname,globalOff));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1222,6 +1232,8 @@ public final class Analyser {
             case "putln":
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.stackalloc,0));
+                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                    globalOff = globalSymbolTable.size()-1;
                     localInstructions.add(new Instruction(Operation.callname,globalOff));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
