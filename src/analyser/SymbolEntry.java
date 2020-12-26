@@ -33,7 +33,11 @@ public class SymbolEntry {
         this.global_count = global_count;
         this.variableType = type;
         //如果为变量或常量则为0,赋值过程在_start中实现，否则为函数名或String的字符全拼
-        this.global_value = global_value;
+        if (global_value == ""){
+            this.global_value = "";
+        }else {
+            this.global_value = global_value;
+        }
     }
 
     public int getVariableType() {

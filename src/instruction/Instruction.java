@@ -9,7 +9,7 @@ public class Instruction {
     public Instruction(Operation opt) {
         this.opt = opt;
         this.OptNum = opt.getNum();
-        this.x = 0;
+        this.x = -1;
     }
 
     public int getOptNum() {
@@ -30,8 +30,8 @@ public class Instruction {
 
     public Instruction() {
         this.opt = Operation.load_64;
-        this.OptNum = opt.getNum();
-        this.x = 0;
+        this.OptNum = this.opt.getNum();
+        this.x = -1;
     }
 
     @Override
