@@ -12,6 +12,14 @@ public class Instruction {
         this.x = 0;
     }
 
+    public int getOptNum() {
+        return OptNum;
+    }
+
+    public void setOptNum(int optNum) {
+        OptNum = optNum;
+    }
+
     public Instruction(Operation opt, Integer x) {
         this.opt = opt;
         this.OptNum = opt.getNum();
@@ -57,6 +65,10 @@ public class Instruction {
         this.x = x;
     }
 
+
+    public String toNum(){
+        return Integer.toString(this.opt.getNum())+Integer.toString(this.x);
+    }
     @Override
     public String toString() {
         switch (this.opt) {
@@ -108,7 +120,7 @@ public class Instruction {
             case print_s:
             case println:
             case panic:
-                return String.format("%s", this.opt);
+                return String.format("%s", this.opt.toString().toUpperCase());
             case push:
             case popn:
             case loca:
@@ -120,7 +132,7 @@ public class Instruction {
             case br_true:
             case call:
             case callname:
-                return String.format("%s %s", this.opt, this.x);
+                return String.format("%s %s", this.opt.toString().toUpperCase(), this.x);
             default:
                 return "panic";
         }

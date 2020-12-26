@@ -1,24 +1,44 @@
 package analyser;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+
 import instruction.Instruction;
 
 public class FuncEntry {
+    /** func_name即为函数在全局变量表中的偏移量 */
     int func_name;
     int ret_num;
     int param_num;
     int locVarNum;
     int bodyCnt;
     int funcOffset;
+    HashMap<String,SymbolEntry> paramSymbolEntry;
     ArrayList<Instruction> instructions;
 
-    public FuncEntry(int func_name, int ret_num, int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions,int funcOffset) {
+    public FuncEntry(int func_name, int ret_num, int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions, int funcOffset, HashMap<String,SymbolEntry> paramSymbolEntry) {
         this.func_name = func_name;
         this.ret_num = ret_num;
         this.param_num = param_num;
         this.locVarNum = locVarNum;
         this.bodyCnt = bodyCnt;
         this.instructions = instructions;
+        this.funcOffset = funcOffset;
+        this.paramSymbolEntry = paramSymbolEntry;
+    }
+
+    public HashMap<String, SymbolEntry> getParamSymbolEntry() {
+        return paramSymbolEntry;
+    }
+
+    public void setParamSymbolEntry(HashMap<String, SymbolEntry> paramSymbolEntry) {
+        this.paramSymbolEntry = paramSymbolEntry;
+    }
+    public int getFuncOffset() {
+        return funcOffset;
+    }
+
+    public void setFuncOffset(int funcOffset) {
         this.funcOffset = funcOffset;
     }
 

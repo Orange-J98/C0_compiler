@@ -115,12 +115,12 @@ public class Tokenizer {
         Pos startpos1 =it.currentPos();
         //字符串String
         if (it.peekChar() == '\"'){
-            token += it.nextChar();
+            it.nextChar();
             while(it.peekChar()!='\"'){
                 token = getEscapeSequence(token);
             }
             if (it.peekChar()=='\"'){
-                token += it.nextChar();
+                it.nextChar();
                 Pos endpos1 = it.currentPos();
                 return new Token(TokenType.STRING_LITERAL,token,startpos1,endpos1);
             }else{
@@ -128,12 +128,12 @@ public class Tokenizer {
             }
         }else if(it.peekChar() == '\''){
             //char字符串
-            token += it.nextChar();
+            it.nextChar();
             while(it.peekChar()!='\''){
                 token = getEscapeSequence(token);
             }
             if (it.peekChar()=='\''){
-                token += it.nextChar();
+                it.nextChar();
                 Pos endpos1 = it.currentPos();
                 return new Token(TokenType.CHAR_LITERAL,token,startpos1,endpos1);
             }else{
