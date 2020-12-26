@@ -88,6 +88,14 @@ public final class Analyser {
             return null;
         }
     }
+    public int getGlobalCounts() throws TokenizeError{
+        return globalSymbolTable.size();
+    }
+
+    public HashMap<String, SymbolEntry> getGlobalSymbolTable() {
+        return globalSymbolTable;
+    }
+
     /**
      * 如果下一个 token 的类型是 tt，则前进一个 token 并返回，否则抛出异常
      *
@@ -159,7 +167,7 @@ public final class Analyser {
                 this.globalSymbolTable.put(name,new SymbolEntry(true,getNextGlobalOffset(),name.length(),name,type));
             }else if(isStr){
                 //把String的key值设为空字符串，防止在检索funcName时造成干扰
-                this.globalSymbolTable.put("",new SymbolEntry(true,getNextGlobalOffset(),name.length(),name,0));
+                this.globalSymbolTable.put(name,new SymbolEntry(true,getNextGlobalOffset(),name.length(),name,0));
             }else {
                 //对于变量和常量，value为0，这里用空字符串表示
                 this.globalSymbolTable.put(name, new SymbolEntry(isConstant, getNextGlobalOffset(), 8, "",type));
@@ -280,6 +288,7 @@ public final class Analyser {
             localInstructions = new ArrayList<>();
             localSymbolTable = new HashMap<>();
             paramTable = new HashMap<>();
+            nextParamOff = 0;
             //      function_param -> 'const'? IDENT ':' ty
             //      function_param_list -> function_param (',' function_param)*
             if(check(TokenType.CONST_KW)||check(TokenType.IDENT)){
@@ -301,6 +310,7 @@ public final class Analyser {
             addFuncSymbol(func_name,globalSymbolTable.get(func_name).getStackOffset(),ret_num,paramTable.size(), localSymbolTable.size(), localInstructions.size(),localInstructions,paramTable,curPos);
             //这里应该已经分析函数完函数了
             isInFunc = false;
+            nextLocOff = 0;
             CurfuncName = "";
         }else if(check(TokenType.LET_KW)||check(TokenType.CONST_KW)){
             //decl_stmt -> let_decl_stmt | const_decl_stmt
@@ -1170,7 +1180,7 @@ public final class Analyser {
     //处理标准库函数
     private boolean isStandardFunc(String name,boolean EmptyNoRet) throws CompileError{
         addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-        int globalOff = 0;
+        int globalOff = globalSymbolTable.size()-1;
         switch (name){
             case "getint":
             case "getchar":
