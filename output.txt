@@ -1,114 +1,38 @@
-Line: 0 Column: 0 Type: FN_KW Value: fn
-Line: 0 Column: 3 Type: IDENT Value: fib
-Line: 0 Column: 6 Type: L_PAREN Value: (
-Line: 0 Column: 7 Type: IDENT Value: x
-Line: 0 Column: 8 Type: COLON Value: :
-Line: 0 Column: 10 Type: IDENT Value: int
-Line: 0 Column: 13 Type: R_PAREN Value: )
-Line: 0 Column: 16 Type: ARROW Value: ->
-Line: 0 Column: 18 Type: IDENT Value: int
-Line: 0 Column: 22 Type: L_BRACE Value: {
-Line: 1 Column: 4 Type: IF_KW Value: if
-Line: 1 Column: 7 Type: IDENT Value: x
-Line: 1 Column: 9 Type: LE Value: <=
-Line: 1 Column: 10 Type: UINT_LITERAL Value: 1
-Line: 1 Column: 12 Type: L_BRACE Value: {
-Line: 2 Column: 8 Type: RETURN_KW Value: return
-Line: 2 Column: 15 Type: UINT_LITERAL Value: 1
-Line: 2 Column: 16 Type: SEMICOLON Value: ;
-Line: 3 Column: 4 Type: R_BRACE Value: }
-Line: 4 Column: 4 Type: LET_KW Value: let
-Line: 4 Column: 8 Type: IDENT Value: result
-Line: 4 Column: 14 Type: COLON Value: :
-Line: 4 Column: 16 Type: IDENT Value: int
-Line: 4 Column: 20 Type: ASSIGN Value: =
-Line: 4 Column: 22 Type: IDENT Value: fib
-Line: 4 Column: 25 Type: L_PAREN Value: (
-Line: 4 Column: 26 Type: IDENT Value: x
-Line: 4 Column: 28 Type: MINUS Value: -
-Line: 4 Column: 30 Type: UINT_LITERAL Value: 1
-Line: 4 Column: 31 Type: R_PAREN Value: )
-Line: 4 Column: 32 Type: SEMICOLON Value: ;
-Line: 5 Column: 4 Type: IDENT Value: result
-Line: 5 Column: 11 Type: ASSIGN Value: =
-Line: 5 Column: 13 Type: IDENT Value: result
-Line: 5 Column: 20 Type: PLUS Value: +
-Line: 5 Column: 22 Type: IDENT Value: fib
-Line: 5 Column: 25 Type: L_PAREN Value: (
-Line: 5 Column: 26 Type: IDENT Value: x
-Line: 5 Column: 28 Type: MINUS Value: -
-Line: 5 Column: 30 Type: UINT_LITERAL Value: 2
-Line: 5 Column: 31 Type: R_PAREN Value: )
-Line: 5 Column: 32 Type: SEMICOLON Value: ;
-Line: 6 Column: 4 Type: RETURN_KW Value: return
-Line: 6 Column: 11 Type: IDENT Value: result
-Line: 6 Column: 17 Type: SEMICOLON Value: ;
-Line: 7 Column: 0 Type: R_BRACE Value: }
-Line: 9 Column: 0 Type: FN_KW Value: fn
-Line: 9 Column: 3 Type: IDENT Value: main
-Line: 9 Column: 7 Type: L_PAREN Value: (
-Line: 9 Column: 8 Type: R_PAREN Value: )
-Line: 9 Column: 11 Type: ARROW Value: ->
-Line: 9 Column: 13 Type: IDENT Value: int
-Line: 9 Column: 17 Type: L_BRACE Value: {
-Line: 10 Column: 4 Type: LET_KW Value: let
-Line: 10 Column: 8 Type: IDENT Value: i
-Line: 10 Column: 9 Type: COLON Value: :
-Line: 10 Column: 11 Type: IDENT Value: int
-Line: 10 Column: 15 Type: ASSIGN Value: =
-Line: 10 Column: 17 Type: UINT_LITERAL Value: 0
-Line: 10 Column: 18 Type: SEMICOLON Value: ;
-Line: 11 Column: 4 Type: LET_KW Value: let
-Line: 11 Column: 8 Type: IDENT Value: j
-Line: 11 Column: 9 Type: COLON Value: :
-Line: 11 Column: 11 Type: IDENT Value: int
-Line: 11 Column: 14 Type: SEMICOLON Value: ;
-Line: 12 Column: 1 Type: LET_KW Value: let
-Line: 12 Column: 5 Type: IDENT Value: str
-Line: 12 Column: 9 Type: ASSIGN Value: =
-Line: 12 Column: 11 Type: STRING_LITERAL Value: "shhsj!??Dsjds"
-Line: 12 Column: 26 Type: SEMICOLON Value: ;
-Line: 13 Column: 4 Type: IDENT Value: j
-Line: 13 Column: 6 Type: ASSIGN Value: =
-Line: 13 Column: 8 Type: IDENT Value: getint
-Line: 13 Column: 14 Type: L_PAREN Value: (
-Line: 13 Column: 15 Type: R_PAREN Value: )
-Line: 13 Column: 16 Type: SEMICOLON Value: ;
-Line: 14 Column: 4 Type: WHILE_KW Value: while
-Line: 14 Column: 10 Type: IDENT Value: i
-Line: 14 Column: 12 Type: LT Value: <
-Line: 14 Column: 14 Type: IDENT Value: j
-Line: 14 Column: 16 Type: L_BRACE Value: {
-Line: 15 Column: 8 Type: IDENT Value: putint
-Line: 15 Column: 14 Type: L_PAREN Value: (
-Line: 15 Column: 15 Type: IDENT Value: i
-Line: 15 Column: 16 Type: R_PAREN Value: )
-Line: 15 Column: 17 Type: SEMICOLON Value: ;
-Line: 16 Column: 8 Type: IDENT Value: putchar
-Line: 16 Column: 15 Type: L_PAREN Value: (
-Line: 16 Column: 16 Type: UINT_LITERAL Value: 32
-Line: 16 Column: 18 Type: R_PAREN Value: )
-Line: 16 Column: 19 Type: SEMICOLON Value: ;
-Line: 17 Column: 8 Type: IDENT Value: putint
-Line: 17 Column: 14 Type: L_PAREN Value: (
-Line: 17 Column: 15 Type: IDENT Value: fib
-Line: 17 Column: 18 Type: L_PAREN Value: (
-Line: 17 Column: 19 Type: IDENT Value: i
-Line: 17 Column: 20 Type: R_PAREN Value: )
-Line: 17 Column: 21 Type: R_PAREN Value: )
-Line: 17 Column: 22 Type: SEMICOLON Value: ;
-Line: 18 Column: 8 Type: IDENT Value: putln
-Line: 18 Column: 13 Type: L_PAREN Value: (
-Line: 18 Column: 14 Type: R_PAREN Value: )
-Line: 18 Column: 15 Type: SEMICOLON Value: ;
-Line: 19 Column: 8 Type: IDENT Value: i
-Line: 19 Column: 10 Type: ASSIGN Value: =
-Line: 19 Column: 12 Type: IDENT Value: i
-Line: 19 Column: 14 Type: PLUS Value: +
-Line: 19 Column: 16 Type: UINT_LITERAL Value: 1
-Line: 19 Column: 17 Type: SEMICOLON Value: ;
-Line: 20 Column: 4 Type: R_BRACE Value: }
-Line: 21 Column: 4 Type: RETURN_KW Value: return
-Line: 21 Column: 11 Type: UINT_LITERAL Value: 0
-Line: 21 Column: 12 Type: SEMICOLON Value: ;
-Line: 22 Column: 0 Type: R_BRACE Value: }
+STACKALLOC 1
+CALL 1
+POPN 1
+LOCA 0
+PUSH 0
+STORE_64
+LOCA 1
+PUSH 1
+STORE_64
+BR 0
+LOCA 0
+LOAD_64
+LOCA 1
+LOAD_64
+CMP_I
+SET_LT
+BR_TRUE 1
+BR 16
+STACKALLOC 0
+LOCA 0
+LOAD_64
+CALLNAME 1
+STACKALLOC 0
+PUSH 32
+CALLNAME 1
+STACKALLOC 0
+CALLNAME 1
+LOCA 0
+LOCA 0
+LOAD_64
+PUSH 1
+ADD_I
+STORE_64
+BR -24
+ARGA 0
+PUSH 0
+STORE_64
+RET

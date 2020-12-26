@@ -18,11 +18,6 @@ public class AnalyzeError extends CompileError {
         return pos;
     }
 
-    /**
-     * @param errorToken
-     * @param code
-     * @param pos
-     */
     public AnalyzeError(ErrorCode code, Pos pos) {
         this.code = code;
         this.pos = pos;

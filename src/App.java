@@ -5,10 +5,12 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
 import analyser.Analyser;
+import analyser.FuncEntry;
 import error.CompileError;
 import instruction.Instruction;
 import tokenizer.StringIter;
@@ -46,9 +48,12 @@ public class App {
         var tokenizer = tokenize(iter);
         var analyzer = new Analyser(tokenizer);
         List<Instruction> instructions;
+
+        HashMap<String, FuncEntry> funcTable= new HashMap<>();
         var tokens = new ArrayList<Token>();
         try {
-            instructions = analyzer.analyse();
+            funcTable = analyzer.analyse();
+            /*TODO:输出内容需要进行修改嗷*/
             while (true) {
                 var token = tokenizer.nextToken();
                 if (token.getTokenType().equals(TokenType.EOF)) {
@@ -58,13 +63,18 @@ public class App {
             }
         } catch (Exception e) {
             // 遇到错误不输出，直接退出
+            e.printStackTrace();
             System.err.println(e);
-            System.exit(0);
+            System.exit(-1);
             return;
         }
-        for (Instruction instruction : instructions) {
-            output.println(instruction.toString());
+        for (FuncEntry funcEntry:funcTable.values()){
+            for (Instruction instruction : funcEntry.getInstructions()) {
+                /*TODO:输出内容需要进行修改嗷*/
+                output.println(instruction.toString());
+            }
         }
+
 //        for (Token token : tokens) {
 //            output.println(token.toString());
 //        }
