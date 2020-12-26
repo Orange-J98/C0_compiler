@@ -1,7 +1,11 @@
 let a:int = 0;
+fn fib(x:int) -> int{
+    return x+1;
+}
 fn main() -> int {
+    putstr("Fuxk U!");
      let i: int = 0;
-     let j: int = 1;
+     let j: int = fib(3);
      while i < j {
          putint(i);
          putchar(32);

@@ -64,59 +64,61 @@ public class App {
             System.exit(-1);
             return;
         }
-        //转换成二进制！
-        int [] maigicVersion ={0x72,0x30,0x3b,0x3e,0,0,0,0x01};
-        for (int num:maigicVersion){
-            Binary.append(toBinary_8(num));
-        }
-        Binary.append(toBinary_32(analyzer.getGlobalCounts()));
         HashMap<String,SymbolEntry> globalTable= analyzer.getGlobalSymbolTable();
-        for(SymbolEntry tempGlobalEntry:globalTable.values()){
-            if (tempGlobalEntry.isConstant()){
-                Binary.append(toBinary_8(1));
-            }else{
-                Binary.append(toBinary_8(0));
-            }
-            Binary.append(toBinary_32(tempGlobalEntry.getGlobal_count()));
-            if (tempGlobalEntry.getGlobal_value().equals("")){
-                Binary.append(toBinary_64(0));
-            }else{
-                Binary.append(StrToBinary(tempGlobalEntry.getGlobal_value()));
-            }
-        }
-        Binary.append(toBinary_32(funcTable.size()));
-        for (FuncEntry funcEntry:funcTable.values()){
-            Binary.append(toBinary_32(funcEntry.getFunc_name()));
-            Binary.append(toBinary_32(funcEntry.getRet_num()));
-            Binary.append(toBinary_32(funcEntry.getParam_num()));
-            Binary.append(toBinary_32(funcEntry.getLocVarNum()));
-            Binary.append(toBinary_32(funcEntry.getBodyCnt()));
-            for (Instruction instruction:funcEntry.getInstructions()){
-                if (instruction.getX()==-1||instruction.getX()==null) {
-                    Binary.append(toBinary_8(instruction.getOptNum()));
-                }else {
-                    Binary.append(toBinary_8(instruction.getOptNum()));
-                    Binary.append(toBinary_64(instruction.getX()));
-                }
-            }
-        }
-        output.print(Binary);
-        //输出指令集
+
+//        //转换成二进制！
+//        int [] maigicVersion ={0x72,0x30,0x3b,0x3e,0,0,0,0x01};
+//        for (int num:maigicVersion){
+//            Binary.append(toBinary_8(num));
+//        }
+//        Binary.append(toBinary_32(analyzer.getGlobalCounts()));
+//        for(SymbolEntry tempGlobalEntry:globalTable.values()){
+//            if (tempGlobalEntry.isConstant()){
+//                Binary.append(toBinary_8(1));
+//            }else{
+//                Binary.append(toBinary_8(0));
+//            }
+//            Binary.append(toBinary_32(tempGlobalEntry.getGlobal_count()));
+//            if (tempGlobalEntry.getGlobal_value().equals("")){
+//                Binary.append(toBinary_64(0));
+//            }else{
+//                Binary.append(StrToBinary(tempGlobalEntry.getGlobal_value()));
+//            }
+//        }
+//        Binary.append(toBinary_32(funcTable.size()));
 //        for (FuncEntry funcEntry:funcTable.values()){
-//            output.println("fn "+getKey(funcTable,funcEntry.getFunc_name())+" ["+globalTable.get(getKey(funcTable,funcEntry.getFunc_name())).getStackOffset()+"] "+funcEntry.getFuncOffset()+" "+funcEntry.getParam_num()+" -> "+funcEntry.getRet_num());
-//            for (Instruction instruction : funcEntry.getInstructions()) {
-//                output.println(instruction.toString());
+//            Binary.append(toBinary_32(funcEntry.getFunc_name()));
+//            Binary.append(toBinary_32(funcEntry.getRet_num()));
+//            Binary.append(toBinary_32(funcEntry.getParam_num()));
+//            Binary.append(toBinary_32(funcEntry.getLocVarNum()));
+//            Binary.append(toBinary_32(funcEntry.getBodyCnt()));
+//            for (Instruction instruction:funcEntry.getInstructions()){
+//                if (instruction.getX()==-1||instruction.getX()==null) {
+//                    Binary.append(toBinary_8(instruction.getOptNum()));
+//                }else {
+//                    Binary.append(toBinary_8(instruction.getOptNum()));
+//                    Binary.append(toBinary_64(instruction.getX()));
+//                }
 //            }
 //        }
+//        output.print(Binary);
+        //输出指令集
+        for (FuncEntry funcEntry:funcTable.values()){
+            output.println("fn "+getKey(funcTable,funcEntry.getFunc_name())+" ["+globalTable.get(getKey(funcTable,funcEntry.getFunc_name())).getStackOffset()+"] "+funcEntry.getFuncOffset()+" "+funcEntry.getParam_num()+" -> "+funcEntry.getRet_num());
+            for (Instruction instruction : funcEntry.getInstructions()) {
+                output.println(instruction.toString());
+            }
+            output.println();
+        }
     }
-//    public static String getKey(HashMap<String,FuncEntry> map, int value){
-//        for(Object key: map.keySet()){
-//            if(map.get(key).getFunc_name()==value){
-//                return (String) key;
-//            }
-//        }
-//        return "";
-//    }
+    public static String getKey(HashMap<String,FuncEntry> map, int value){
+        for(Object key: map.keySet()){
+            if(map.get(key).getFunc_name()==value){
+                return (String) key;
+            }
+        }
+        return "";
+    }
 
 
     private static Tokenizer tokenize(StringIter iter) {
