@@ -1377,7 +1377,6 @@ public final class Analyser {
                         addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
                         globalName.add(name);
                     }
-
                     localInstructions.add(new Instruction(Operation.add_i.println));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());

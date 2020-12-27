@@ -117,7 +117,7 @@ public class App {
             for (int num:maigicVersion){
                 toBinary_8(Binary,num);
             }
-            toBinary_32(Binary,analyzer.getGlobalCounts());
+            toBinary_32(Binary,globalName.size());
             for(String tempGlobalName:globalName){
                 SymbolEntry tempGlobalEntry = globalTable.get(tempGlobalName);
                 if (tempGlobalEntry.isConstant()){
