@@ -1,9 +1,4 @@
-fn fib(x:int) -> void{
-    putstr("sb");
-}
-
 fn main() -> void {
-    putstr("=============\n| #  /\\ + \" |\n|  /:\"\"\'\\\\^||\n|/|\\?\"\'/\\  !|\n|\\r \\ #s    |\n|\\a /\\  /\\\\v|\n=============");
-
-    putstr("sss");
+    putstr("Hello, world!");
+    putln();
 }

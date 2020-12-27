@@ -82,6 +82,7 @@ public class App {
                 StrToBinary(Binary,tempGlobalEntry.getGlobal_value());
             }
         }
+        toBinary_32(Binary,analyzer.getFuncCounts());
         for (String tempFuncName:funcName){
             FuncEntry funcEntry = funcTable.get(tempFuncName);
             toBinary_32(Binary,funcEntry.getFunc_name());
@@ -104,25 +105,25 @@ public class App {
         for (byte temp:Binary){
             OutputByte[i++] = temp;
         }
-//        try {
-//            output.write(OutputByte);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            output.write(OutputByte);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        for (String globalN: globalName){
-            SymbolEntry globalS = globalTable.get(globalN);
-            output.println(globalN+": "+globalS.getStackOffset()+"  "+globalS.getGlobal_value());
-        }
-        output.println();
-        for (String tempFuncName:funcName){
-            FuncEntry tempFuncEntry = funcTable.get(tempFuncName);
-            output.println("fn "+tempFuncName+" ["+globalTable.get(tempFuncName).getStackOffset()+"] "+tempFuncEntry.getLocVarNum()+" "+tempFuncEntry.getParam_num()+" -> "+tempFuncEntry.getRet_num());
-            for (Instruction instruction : tempFuncEntry.getInstructions()) {
-                output.println(instruction.toString());
-            }
-            output.println();
-        }
+//        for (String globalN: globalName){
+//            SymbolEntry globalS = globalTable.get(globalN);
+//            output.println(globalN+": "+globalS.getStackOffset()+"  "+globalS.getGlobal_value());
+//        }
+//        output.println();
+//        for (String tempFuncName:funcName){
+//            FuncEntry tempFuncEntry = funcTable.get(tempFuncName);
+//            output.println("fn "+tempFuncName+" ["+globalTable.get(tempFuncName).getStackOffset()+"] "+tempFuncEntry.getLocVarNum()+" "+tempFuncEntry.getParam_num()+" -> "+tempFuncEntry.getRet_num());
+//            for (Instruction instruction : tempFuncEntry.getInstructions()) {
+//                output.println(instruction.toString());
+//            }
+//            output.println();
+//        }
 
     }
 

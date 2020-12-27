@@ -94,6 +94,9 @@ public final class Analyser {
     public int getGlobalCounts() throws TokenizeError{
         return globalSymbolTable.size();
     }
+    public int getFuncCounts() throws TokenizeError{
+        return funcTable.size();
+    }
 
     public HashMap<String, SymbolEntry> getGlobalSymbolTable() {
         return globalSymbolTable;
