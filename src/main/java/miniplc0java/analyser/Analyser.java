@@ -180,6 +180,9 @@ public final class Analyser {
                 //对于函数或者String，value为其全拼
                 this.globalSymbolTable.put(name,new SymbolEntry(true,getNextGlobalOffset(),name.length(),name,type));
             }else if(isStr){
+                if (this.globalSymbolTable.get(name)!=null){
+                    name  = name + (globalSymbolTable.size()+1);
+                }
                 //把String的key值设为空字符串，防止在检索funcName时造成干扰
                 this.globalSymbolTable.put(name,new SymbolEntry(true,getNextGlobalOffset(),name.length(),name,0));
             }else {
@@ -253,16 +256,13 @@ public final class Analyser {
         // 程序
         //program -> item*
         //      item -> function | decl_stmt
-        //TODO _start()
-
-
-
 
         addFuncSymbol("_start",-1,0, 0,0,-1,null,null,peek().getStartPos());
         funcName.add("_start");
         while(!check(TokenType.EOF)){
             analyseItem();
         }
+
         if(funcTable.get("main")==null){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
@@ -280,7 +280,9 @@ public final class Analyser {
         }
         addGlobalSymbol("_start",true,false,true,0,peek().getStartPos());
         globalName.add("_start");
-        int _startGlobalOff = globalSymbolTable.size()-1;
+
+        int _startGlobalOff = globalSymbolTable.get("_start").stackOffset;
+
         funcTable.get("_start").setFunc_name(_startGlobalOff);
         funcTable.get("_start").setBodyCnt(globalInstructions.size());
         funcTable.get("_start").setInstructions(globalInstructions);
@@ -496,6 +498,7 @@ public final class Analyser {
         int jump = localInstructions.size()-startIf;
         localInstructions.get(index).setX(jump);
         isInIf = false;
+
         //这里需要设置结构体执行完后的跳转,finish跳转
         localInstructions.add(new Instruction(Operation.br,0));
 
@@ -1348,12 +1351,9 @@ public final class Analyser {
                 return  true;
             case "putln":
                 if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.stackalloc,0));
                     addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-
                     globalName.add(name);
-                    int globalOff4 = globalSymbolTable.get(name).getStackOffset();
-                    localInstructions.add(new Instruction(Operation.callname,globalOff4));
+                    localInstructions.add(new Instruction(Operation.add_i.println));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }

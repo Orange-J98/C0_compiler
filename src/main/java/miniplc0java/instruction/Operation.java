@@ -1,5 +1,11 @@
 package miniplc0java.instruction;
 
+import java.nio.file.AccessDeniedException;
+import miniplc0java.error.AnalyzeError;
+import miniplc0java.error.CompileError;
+import miniplc0java.error.ErrorCode;
+import org.checkerframework.checker.units.qual.A;
+
 public enum Operation {
     nop, push, pop, popn, dup, loca, arga, globa, load_8, load_16,
     load_32, load_64, store_8, store_16, store_32, store_64, alloc,
@@ -9,7 +15,7 @@ public enum Operation {
     ret, callname, scan_i, scan_c, scan_f, print_i, print_c, print_f,
     print_s, println, panic;
 
-    public int getNum() {
+    public int getNum() throws CompileError {
         switch (this) {
             case nop:
                 return 0x00;
@@ -128,8 +134,9 @@ public enum Operation {
             case println:
                 return 0x58;
             case panic:
-            default:
                 return 0xfe;
+            default:
+                throw new AnalyzeError(ErrorCode.DuplicateDeclaration,null);
         }
     }
 }
