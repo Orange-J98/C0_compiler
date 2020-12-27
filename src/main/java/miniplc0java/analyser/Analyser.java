@@ -1119,8 +1119,10 @@ public final class Analyser {
                 //对于String类型，只会出现在putStr中，而且String要加入到全局变量表当中;
                 var strToken = expect(TokenType.STRING_LITERAL);
                 String strName = (String) strToken.getValue();
-                addGlobalSymbol(strName,false,true,true,0,peek().getStartPos());
-                globalName.add(strName);
+                if (globalSymbolTable.get(strName)==null){
+                    addGlobalSymbol(strName,false,true,true,0,peek().getStartPos());
+                    globalName.add(strName);
+                }
 
                 //获取当前全局变量表的偏移量;
 
@@ -1260,15 +1262,19 @@ public final class Analyser {
         switch (name){
             case "getint":
                 if (isInFunc){
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.scan_i));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
                     }
                 }else{
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     globalInstructions.add(new Instruction(Operation.scan_i));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1277,15 +1283,19 @@ public final class Analyser {
                 return true;
             case "getchar":
                 if (isInFunc){
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.scan_c));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
                     }
                 }else{
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     globalInstructions.add(new Instruction(Operation.scan_c));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1294,15 +1304,19 @@ public final class Analyser {
                 return true;
             case "getdouble":
                 if (isInFunc){
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.scan_f));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
                     }
                 }else{
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     globalInstructions.add(new Instruction(Operation.scan_f));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1312,8 +1326,10 @@ public final class Analyser {
             case "putdouble":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.print_f));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1322,8 +1338,10 @@ public final class Analyser {
             case "putint":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.print_i));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1332,8 +1350,10 @@ public final class Analyser {
             case "putchar":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null) {
+                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.print_c));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1342,8 +1362,10 @@ public final class Analyser {
             case "putstr":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null){
+                        addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                        globalName.add(name);
+                    }
                     localInstructions.add(new Instruction(Operation.print_s));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1351,8 +1373,11 @@ public final class Analyser {
                 return  true;
             case "putln":
                 if (isInFunc){
-                    addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                    globalName.add(name);
+                    if (globalSymbolTable.get(name)==null){
+                        addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                        globalName.add(name);
+                    }
+
                     localInstructions.add(new Instruction(Operation.add_i.println));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
