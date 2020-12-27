@@ -132,6 +132,7 @@ public class App {
                     StrToBinary(Binary,tempGlobalEntry.getGlobal_value());
                 }
             }
+            toBinary_32(Binary,analyzer.getFuncCounts());
             for (String tempFuncName:funcName){
                 FuncEntry funcEntry = funcTable.get(tempFuncName);
                 toBinary_32(Binary,funcEntry.getFunc_name());
