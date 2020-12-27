@@ -1098,9 +1098,9 @@ public final class Analyser {
     private void analyseFactor() throws CompileError{
         boolean negate = false;
         //这里是一个取翻表达式；
-        if (check(TokenType.MINUS)){
+        while (check(TokenType.MINUS)){
             next();
-            negate = true;
+            negate = !negate;
         }
         if (check(TokenType.L_PAREN)){
             next();
