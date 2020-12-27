@@ -35,6 +35,9 @@ public final class Analyser {
     /** 函数体内部使用指令集 */
     ArrayList<Instruction> localInstructions;
 
+    ArrayList<String> funcName = new ArrayList<>();
+    ArrayList<String> globalName = new ArrayList<>();
+
     /** 下一个变量的栈偏移 */
     int nextGlobalOffset = 0;
     /** 下一个局部变量的栈偏移 */
@@ -94,6 +97,14 @@ public final class Analyser {
 
     public HashMap<String, SymbolEntry> getGlobalSymbolTable() {
         return globalSymbolTable;
+    }
+
+    public ArrayList<String> getFuncName() {
+        return funcName;
+    }
+
+    public ArrayList<String> getGlobalName() {
+        return globalName;
     }
 
     /**
@@ -245,6 +256,7 @@ public final class Analyser {
 
 
         addFuncSymbol("_start",-1,0, 0,0,-1,null,null,peek().getStartPos());
+        funcName.add("_start");
         while(!check(TokenType.EOF)){
             analyseItem();
         }
@@ -258,6 +270,7 @@ public final class Analyser {
         globalInstructions.add(new Instruction(Operation.popn,1));
 
         addGlobalSymbol("_start",true,false,true,0,peek().getStartPos());
+        globalName.add("_start");
         int _startGlobalOff = globalSymbolTable.size()-1;
         funcTable.get("_start").setFunc_name(_startGlobalOff);
         funcTable.get("_start").setBodyCnt(globalInstructions.size());
@@ -306,6 +319,7 @@ public final class Analyser {
             }
             //要将函数加入到全局变量表里面嗷
             addGlobalSymbol(func_name,true,false,true,ret_num,curPos);
+            globalName.add(func_name);
             if (ret_num==2){
                 //Todo:Double;
                 ret_num = 1;
@@ -317,8 +331,10 @@ public final class Analyser {
             //参数表的使命应该已经完成了，要加入到函数表里面
             if (ret_num>0){
                 addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size()-1, localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
+                funcName.add(func_name);
             }else {
                 addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size(), localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
+                funcName.add(func_name);
             }//这里应该已经分析函数完函数了
             isInFunc = false;
             nextLocOff = 0;
@@ -647,6 +663,7 @@ public final class Analyser {
             addLocalSymbol(name,isInit,false,variableType,curPos);
         }else{
             addGlobalSymbol(name,false,false,false,variableType,curPos);
+            globalName.add(name);
         }
 
         if (isInit){
@@ -687,6 +704,7 @@ public final class Analyser {
             localInstructions.add(new Instruction(Operation.store_64));
         }else{
             addGlobalSymbol(constName,false,false,true,variableType,curPos);
+            globalName.add(constName);
             int globalOff = globalSymbolTable.get(constName).getStackOffset();
             globalInstructions.add(new Instruction(Operation.globa,globalOff));
             analyseExpr();
@@ -1084,6 +1102,7 @@ public final class Analyser {
                 var strToken = expect(TokenType.STRING_LITERAL);
                 String strName = (String) strToken.getValue();
                 addGlobalSymbol(strName,false,true,true,0,peek().getStartPos());
+                globalName.add(strName);
                 //获取当前全局变量表的偏移量;
                 int globalOff = globalSymbolTable.size()-1;
                 if (isInFunc){
@@ -1222,6 +1241,7 @@ public final class Analyser {
             case "getchar":
                 if (isInFunc){
                     addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                    globalName.add(name);
                     localInstructions.add(new Instruction(Operation.stackalloc,1));
                     globalOff = globalSymbolTable.size()-1;
                     localInstructions.add(new Instruction(Operation.callname,globalOff));
@@ -1233,6 +1253,7 @@ public final class Analyser {
 //                    }
                 }else{
                     addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                    globalName.add(name);
                     globalInstructions.add(new Instruction(Operation.stackalloc,1));
                     globalOff = globalSymbolTable.size()-1;
                     globalInstructions.add(new Instruction(Operation.callname,globalOff));
@@ -1255,6 +1276,7 @@ public final class Analyser {
                     localInstructions.add(new Instruction(Operation.stackalloc,0));
                     analyseAddMinusExpr();
                     addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                    globalName.add(name);
                     globalOff = globalSymbolTable.size()-1;
                     localInstructions.add(new Instruction(Operation.callname,globalOff));
                 }else {
@@ -1265,6 +1287,7 @@ public final class Analyser {
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.stackalloc,0));
                     addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
+                    globalName.add(name);
                     globalOff = globalSymbolTable.size()-1;
                     localInstructions.add(new Instruction(Operation.callname,globalOff));
                 }else {

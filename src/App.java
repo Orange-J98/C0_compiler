@@ -1,9 +1,4 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.*;
 
 import analyser.*;
@@ -45,7 +40,6 @@ public class App {
         var tokenizer = tokenize(iter);
         var analyzer = new Analyser(tokenizer);
         List<Instruction> instructions;
-        StringBuilder Binary = new StringBuilder();
         HashMap<String, FuncEntry> funcTable= new HashMap<>();
         var tokens = new ArrayList<Token>();
         try {
@@ -65,107 +59,98 @@ public class App {
             return;
         }
         HashMap<String,SymbolEntry> globalTable= analyzer.getGlobalSymbolTable();
-
-//        //转换成二进制！
-//        int [] maigicVersion ={0x72,0x30,0x3b,0x3e,0,0,0,0x01};
+        ArrayList<String> funcName = analyzer.getFuncName();
+        ArrayList<String> globalName = analyzer.getGlobalName();
+        ArrayList<Byte> Binary = new ArrayList<>();
+        //转换成二进制！
+//        int [] maigicVersion ={0x72,0x30,0x3b,0x3e,0x0,0x0,0x0,0x01};
 //        for (int num:maigicVersion){
-//            Binary.append(toBinary_8(num));
+//            toBinary_8(Binary,num);
 //        }
-//        Binary.append(toBinary_32(analyzer.getGlobalCounts()));
-//        for(SymbolEntry tempGlobalEntry:globalTable.values()){
+//        toBinary_32(Binary,analyzer.getGlobalCounts());
+//        for(String tempGlobalName:globalName){
+//            SymbolEntry tempGlobalEntry = globalTable.get(tempGlobalName);
 //            if (tempGlobalEntry.isConstant()){
-//                Binary.append(toBinary_8(1));
+//                toBinary_8(Binary,1);
 //            }else{
-//                Binary.append(toBinary_8(0));
+//                toBinary_8(Binary,0);
 //            }
-//            Binary.append(toBinary_32(tempGlobalEntry.getGlobal_count()));
+//            toBinary_32(Binary,tempGlobalEntry.getGlobal_count());
 //            if (tempGlobalEntry.getGlobal_value().equals("")){
-//                Binary.append(toBinary_64(0));
+//                toBinary_64(Binary,0);
 //            }else{
-//                Binary.append(StrToBinary(tempGlobalEntry.getGlobal_value()));
+//                StrToBinary(Binary,tempGlobalEntry.getGlobal_value());
 //            }
 //        }
-//        Binary.append(toBinary_32(funcTable.size()));
-//        for (FuncEntry funcEntry:funcTable.values()){
-//            Binary.append(toBinary_32(funcEntry.getFunc_name()));
-//            Binary.append(toBinary_32(funcEntry.getRet_num()));
-//            Binary.append(toBinary_32(funcEntry.getParam_num()));
-//            Binary.append(toBinary_32(funcEntry.getLocVarNum()));
-//            Binary.append(toBinary_32(funcEntry.getBodyCnt()));
+//        for (String tempFuncName:funcName){
+//            FuncEntry funcEntry = funcTable.get(tempFuncName);
+//            toBinary_32(Binary,funcEntry.getFunc_name());
+//            toBinary_32(Binary,funcEntry.getRet_num());
+//            toBinary_32(Binary,funcEntry.getParam_num());
+//            toBinary_32(Binary,funcEntry.getLocVarNum());
+//            toBinary_32(Binary,funcEntry.getBodyCnt());
 //            for (Instruction instruction:funcEntry.getInstructions()){
 //                if (instruction.getX()==-1||instruction.getX()==null) {
-//                    Binary.append(toBinary_8(instruction.getOptNum()));
+//                    toBinary_8(Binary,instruction.getOptNum());
 //                }else {
-//                    Binary.append(toBinary_8(instruction.getOptNum()));
-//                    Binary.append(toBinary_64(instruction.getX()));
+//                    toBinary_8(Binary,instruction.getOptNum());
+//                    toBinary_64(Binary,instruction.getX());
 //                }
 //            }
 //        }
-//        output.print(Binary);
+//        int length = Binary.size();
+//        byte [] OutputByte = new byte[Binary.size()];
+//        int i=0;
+//        for (byte temp:Binary){
+//            OutputByte[i++] = temp;
+//        }
+//        try {
+//            output.write(OutputByte);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
         //输出指令集
-        for (FuncEntry funcEntry:funcTable.values()){
-            output.println("fn "+getKey(funcTable,funcEntry.getFunc_name())+" ["+globalTable.get(getKey(funcTable,funcEntry.getFunc_name())).getStackOffset()+"] "+funcEntry.getFuncOffset()+" "+funcEntry.getParam_num()+" -> "+funcEntry.getRet_num());
-            for (Instruction instruction : funcEntry.getInstructions()) {
+        for (String tempFuncName:funcName){
+            FuncEntry tempFuncEntry = funcTable.get(tempFuncName);
+            output.println("fn "+tempFuncName+" ["+globalTable.get(tempFuncName).getStackOffset()+"] "+tempFuncEntry.getLocVarNum()+" "+tempFuncEntry.getParam_num()+" -> "+tempFuncEntry.getRet_num());
+            for (Instruction instruction : tempFuncEntry.getInstructions()) {
                 output.println(instruction.toString());
             }
             output.println();
         }
-    }
-    public static String getKey(HashMap<String,FuncEntry> map, int value){
-        for(Object key: map.keySet()){
-            if(map.get(key).getFunc_name()==value){
-                return (String) key;
-            }
-        }
-        return "";
-    }
 
+    }
 
     private static Tokenizer tokenize(StringIter iter) {
         var tokenizer = new Tokenizer(iter);
         return tokenizer;
     }
-    private  static String toBinary_8 (int num)
+    private  static void toBinary_8 (ArrayList<Byte>Binary,int num)
     {
-        String binary_8=Integer.toBinaryString(num);
-        int bit = 8-binary_8.length();
-        if(binary_8.length()<8){
-            for(int j=0; j<bit; j++){
-                binary_8 = "0"+binary_8;
-            }
+        for (int i=0;i>=0;i--) {
+            Binary.add((byte) (num >> (8 * i) & 0xff));
         }
-        return binary_8;
     }
 
-    private  static String toBinary_32 (int num)
+    private  static void toBinary_32 (ArrayList<Byte>Binary,int num)
     {
-        String binary_32=Integer.toBinaryString(num);
-        int bit = 32-binary_32.length();
-        if(binary_32.length()<32){
-            for(int j=0; j<bit; j++){
-                binary_32 = "0"+binary_32;
-            }
+        for (int i=3;i>=0;i--) {
+            Binary.add((byte) (num >> (8 * i) & 0xff));
         }
-        return binary_32;
     }
 
-    private  static String toBinary_64 (int num)
+    private  static void toBinary_64 (ArrayList<Byte>Binary,int num)
     {
-        String binary_64=Integer.toBinaryString(num);
-        int bit = 64-binary_64.length();
-        if(binary_64.length()<64){
-            for(int j=0; j<bit; j++){
-                binary_64 = "0"+binary_64;
-            }
+        for (int i=7;i>=0;i--) {
+            Binary.add((byte) (num >> (8 * i) & 0xff));
         }
-        return binary_64;
     }
-    private static String StrToBinary(String str) {
-        char[] strChar = str.toCharArray();
-        String result = "";
-        for (int i = 0; i < strChar.length; i++) {
-            result += Integer.toBinaryString(strChar[i]);
+
+    private static void StrToBinary(ArrayList<Byte>Binary,String str) {
+        byte[] s = str.getBytes();
+        for (byte tempS : s) {
+            Binary.add(tempS);
         }
-        return result;
     }
 }
