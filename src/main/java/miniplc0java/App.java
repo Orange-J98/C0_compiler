@@ -125,13 +125,14 @@ public class App {
                 }else{
                     toBinary_8(Binary,0);
                 }
-                toBinary_32(Binary,tempGlobalEntry.getGlobal_count());
+                toBinary_32(Binary,globalName.size());
                 if (tempGlobalEntry.getGlobal_value().equals("")){
                     toBinary_64(Binary,0);
                 }else{
                     StrToBinary(Binary,tempGlobalEntry.getGlobal_value());
                 }
             }
+            toBinary_32(Binary,funcName.size());
             for (String tempFuncName:funcName){
                 FuncEntry funcEntry = funcTable.get(tempFuncName);
                 toBinary_32(Binary,funcEntry.getFunc_name());
