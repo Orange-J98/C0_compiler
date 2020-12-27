@@ -638,6 +638,8 @@ public final class Analyser {
             localInstructions.add(new Instruction(Operation.arga,0));
             analyseAddMinusExpr();
             localInstructions.add(new Instruction(Operation.store_64));
+        }else if (ret_num>0){
+            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
         if (isInFunc){
             localInstructions.add(new Instruction(Operation.ret));
