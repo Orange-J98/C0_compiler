@@ -267,8 +267,9 @@ public final class Analyser {
         int mainOff = funcTable.get("main").funcOffset;
         globalInstructions.add(new Instruction(Operation.stackalloc,1));
         globalInstructions.add(new Instruction(Operation.call,mainOff));
-        globalInstructions.add(new Instruction(Operation.popn,1));
-
+        if(funcTable.get("main").getRet_num()>0) {
+            globalInstructions.add(new Instruction(Operation.popn, 1));
+        }
         addGlobalSymbol("_start",true,false,true,0,peek().getStartPos());
         globalName.add("_start");
         int _startGlobalOff = globalSymbolTable.size()-1;
