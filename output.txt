@@ -1,14 +1,29 @@
-main: 0  main
-=============\n| #  /\\ + \" |\n|  /:\"\"\'\\\\^||\n|/|\\?\"\'/\\  !|\n|\\r \\ #s    |\n|\\a /\\  /\\\\v|\n=============: 1  =============\n| #  /\\ + \" |\n|  /:\"\"\'\\\\^||\n|/|\\?\"\'/\\  !|\n|\\r \\ #s    |\n|\\a /\\  /\\\\v|\n=============
-putstr: 2  putstr
-_start: 3  _start
+fib: 0  fib
+sb: 1  sb
+putstr: 7  putstr
+main: 3  main
+=============\n| #  /\\ + \" |\n|  /:\"\"\'\\\\^||\n|/|\\?\"\'/\\  !|\n|\\r \\ #s    |\n|\\a /\\  /\\\\v|\n=============: 4  =============\n| #  /\\ + \" |\n|  /:\"\"\'\\\\^||\n|/|\\?\"\'/\\  !|\n|\\r \\ #s    |\n|\\a /\\  /\\\\v|\n=============
+putstr: 7  putstr
+sss: 6  sss
+putstr: 7  putstr
+_start: 8  _start
 
-fn _start [3] 0 0 -> 0
-STACKALLOC 1
-CALL 1
+fn _start [8] 0 0 -> 0
+STACKALLOC 0
+CALL 2
 
-fn main [0] 0 0 -> 0
+fn fib [0] 0 1 -> 0
 STACKALLOC 0
 PUSH 1
 CALLNAME 2
+RET
+
+fn main [3] 0 0 -> 0
+STACKALLOC 0
+PUSH 4
+CALLNAME 5
+STACKALLOC 0
+PUSH 6
+CALLNAME 7
+RET
 
