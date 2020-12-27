@@ -180,11 +180,9 @@ public class App {
 
     private  static void toBinary_64 (ArrayList<Byte>Binary,int num)
     {
-        for (int i=3;i>=0;i--){
-            Binary.add((byte)0);
-        }
-        for (int i=3;i>=0;i--) {
-            Binary.add((byte) (num >> (8 * i) & 0xff));
+        long newNum = (long)num;
+        for (int i=7;i>=0;i--) {
+            Binary.add((byte) (newNum >> (8 * i) & 0xff));
         }
     }
 
