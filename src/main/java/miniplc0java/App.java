@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Scanner;
 import miniplc0java.error.CompileError;
 import miniplc0java.instruction.Instruction;
+import miniplc0java.instruction.Operation;
 import miniplc0java.tokenizer.StringIter;
 import miniplc0java.tokenizer.Token;
 import miniplc0java.tokenizer.TokenType;
@@ -118,6 +119,7 @@ public class App {
                 toBinary_8(Binary,num);
             }
             toBinary_32(Binary,globalName.size());
+
             for(String tempGlobalName:globalName){
                 SymbolEntry tempGlobalEntry = globalTable.get(tempGlobalName);
                 if (tempGlobalEntry.isConstant()){
@@ -125,7 +127,7 @@ public class App {
                 }else{
                     toBinary_8(Binary,0);
                 }
-                toBinary_32(Binary,globalName.size());
+                toBinary_32(Binary,tempGlobalEntry.getGlobal_count());
                 if (tempGlobalEntry.getGlobal_value().equals("")){
                     toBinary_64(Binary,0);
                 }else{
@@ -145,7 +147,11 @@ public class App {
                         toBinary_8(Binary,instruction.getOptNum());
                     }else {
                         toBinary_8(Binary,instruction.getOptNum());
-                        toBinary_64(Binary,instruction.getX());
+                        if (instruction.getOptNum()== 0x01){
+                            toBinary_64(Binary,instruction.getX());
+                        }else{
+                            toBinary_32(Binary,instruction.getX());
+                        }
                     }
                 }
             }
@@ -185,6 +191,7 @@ public class App {
             Binary.add((byte) (newNum >> (8 * i) & 0xff));
         }
     }
+
 
     private static void StrToBinary(ArrayList<Byte>Binary,String str) {
         byte[] s = str.getBytes();
