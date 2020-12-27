@@ -146,12 +146,34 @@ public class Tokenizer {
     //识别转义字符
     private String getEscapeSequence(String token) throws TokenizeError {
         if(it.peekChar()=='\\'){
-            token+=it.nextChar();
-            if(it.peekChar()=='\\'||it.peekChar()=='\"'||it.peekChar()=='\''||it.peekChar()=='n'||it.peekChar()=='r'||it.peekChar()=='t'){
-                token+=it.nextChar();
-                return token;
-            }else{
-                throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+            it.nextChar();
+            switch (it.peekChar()){
+                case '\\':
+                    token+='\\';
+                    it.nextChar();
+                    return token;
+                case '"':
+                    token+='\"';
+                    it.nextChar();
+                    return token;
+                case '\'':
+                    token+='\'';
+                    it.nextChar();
+                    return token;
+                case 'n':
+                    token+='\n';
+                    it.nextChar();
+                    return token;
+                case 't':
+                    token+='\t';
+                    it.nextChar();
+                    return token;
+                case 'r':
+                    token+='\r';
+                    it.nextChar();
+                    return token;
+                default:
+                    throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
             }
         }
         token += it.nextChar();
