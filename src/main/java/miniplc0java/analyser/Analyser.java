@@ -509,6 +509,7 @@ public final class Analyser {
         Stack<Integer>Offset = new Stack<>();
         Offset.push(tempStartOff);
 
+        int elseNum = 0;
         while (check(TokenType.ELSE_KW)){
             next();
             if (check(TokenType.IF_KW)){
@@ -535,11 +536,11 @@ public final class Analyser {
                 Offset.push(NewStartOff);
             }else{
                 isInIf = true;
+                elseNum++;
                 analyseBlockStmt();
                 isInIf = false;
                 break;
             }
-
             int EndOffset = localInstructions.size();
             while (!Offset.empty()&&!Index.empty()){
                 int OneOff =Offset.pop();
@@ -548,10 +549,13 @@ public final class Analyser {
             }
 
         }
-
         if (check(TokenType.ELSE_KW)){
+            elseNum++;
             next();
             analyseBlockStmt();
+        }
+        if (elseNum>1){
+            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
     }
 
