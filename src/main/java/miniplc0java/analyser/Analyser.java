@@ -295,6 +295,8 @@ public final class Analyser {
     //program -> item*
     String CurfuncName = "";
     boolean isReturn = false;
+    int shouldRetType = 0;
+
     private void analyseItem() throws CompileError {
         if(nextIf(TokenType.FN_KW)!=null){
             //标记现在处于在函数中的状态！
@@ -314,6 +316,7 @@ public final class Analyser {
             localSymbolTable = new HashMap<>();
             paramTable = new HashMap<>();
             nextParamOff = 0;
+            shouldRetType = 0;
             //      function_param -> 'const'? IDENT ':' ty
             //      function_param_list -> function_param (',' function_param)*
             if(check(TokenType.CONST_KW)||check(TokenType.IDENT)){
@@ -322,6 +325,7 @@ public final class Analyser {
             expect(TokenType.R_PAREN);
             expect(TokenType.ARROW);
             int ret_num = analyseTy();
+            shouldRetType = ret_num;
             if (ret_num>0){
                 for (SymbolEntry tempParam:paramTable.values()){
                     tempParam.setStackOffset(tempParam.getStackOffset()+1);
@@ -345,6 +349,7 @@ public final class Analyser {
                 addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size(), localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
                 funcName.add(func_name);
             }
+
             analyseBlockStmt();
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
@@ -580,8 +585,12 @@ public final class Analyser {
             //while只能在函数中出现
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
-        analyseCompareExpr(false);
-        //分析结构体
+        if (nextIf(TokenType.L_PAREN)!=null){
+            analyseCompareExpr(false);
+            expect(TokenType.R_PAREN);
+        }else {
+            analyseCompareExpr(false);
+        }//分析结构体
         //TODO:break,continue,return
         int judgeFalseOff = localInstructions.size();
         localInstructions.add(new Instruction(Operation.br,0));
@@ -647,7 +656,7 @@ public final class Analyser {
             localInstructions.add(new Instruction(Operation.arga,0));
             analyseAddMinusExpr();
             localInstructions.add(new Instruction(Operation.store_64));
-        }else if (ret_num>0){
+        }else if(ret_num>0){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
         if (isInFunc){
@@ -778,6 +787,9 @@ public final class Analyser {
                         int localOff = localSymbolTable.get(LeftName).getStackOffset();
                         localSymbolTable.get(LeftName).setInitialized(true);
                         localInstructions.add(new Instruction(Operation.loca, localOff));
+                    }else if (paramTable.get(LeftName)!=null){
+                        int paramOff = paramTable.get(LeftName).getStackOffset();
+                        localInstructions.add(new Instruction(Operation.arga,paramOff));
                     }else if (globalSymbolTable.get(LeftName)!=null){
                         int globalOff = globalSymbolTable.get(LeftName).getStackOffset();
                         globalSymbolTable.get(LeftName).setInitialized(true);
@@ -801,49 +813,6 @@ public final class Analyser {
 //                 赋值表达式的语义是将右侧表达式的计算结果赋给左侧表示的值。
                 //这里是赋值语句的右值
                 //赋值的右值还可能是函数，TODO:但是函数一定要有返回值！！！这里标准库函数没法验证
-
-//                 if (check(TokenType.L_PAREN)){
-//                     next();
-//                     int funcOff;
-//                     var funcSymbol = funcTable.get(name);
-//                     if (funcSymbol == null){
-//                         /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
-//                         boolean isStd= isStandardFunc(name,false);
-//                         if (!isStd){
-//                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-//                         }
-//                     }else {
-//                         //不是标准库函数，进行栈处理
-//                         if (isInFunc) {
-//                             int ret_num = funcSymbol.getRet_num();
-//                             if (ret_num<=0){
-//                                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-//                             }
-//                             localInstructions.add(new Instruction(Operation.stackalloc,ret_num));
-//                         } else {
-//                             throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-//                         }
-//                     }
-//                     //说明不是标准库函数
-//                     if (funcSymbol!=null){
-//                         //进行参数处理！
-//                         //对表达式进行分析;对于函数参数的空式子不用popn
-//                         int paramNum = funcSymbol.getParam_num();
-//                         while (paramNum>0) {
-//                             paramNum --;
-//                             analyseEmptyExpr();
-//                         }
-//                         funcOff = funcSymbol.getFuncOffset();
-//                         localInstructions.add(new Instruction(Operation.call,funcOff));
-//                         int ret_num = funcSymbol.getRet_num();
-//                         if (ret_num>0) {
-//                             localInstructions.add(new Instruction(Operation.store_64, ret_num));
-//                         }else {
-//                             throw new AnalyzeError(ErrorCode.NoEnd,peek().getStartPos());
-//                         }
-//                     }
-//                     expect(TokenType.R_PAREN);
-//                 }else {
                 analyseAddMinusExpr();
                 /* 对于赋值语句来说这里需要存值！ */
                 if (isInFunc) {
@@ -861,6 +830,7 @@ public final class Analyser {
                 if (funcSymbol == null){
                     /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
                     boolean isStd= isStandardFunc(LeftName,true);
+                    expect(TokenType.R_PAREN);
                     if (!isStd){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
@@ -872,14 +842,28 @@ public final class Analyser {
                     } else {
                         throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
                     }
-                }
-                //说明不是标准库函数
-                if (funcSymbol!=null){
+                    //说明不是标准库函数
                     //进行参数处理！
                     //对表达式进行分析;对于函数参数的空式子不用popn
-                    int paramNum = funcSymbol.getParam_num();
-                    while (paramNum-->0) {
-                        analyseEmptyExpr();
+                    if (check(TokenType.R_PAREN)){
+                        expect(TokenType.R_PAREN);
+                    }else{
+                        //如果左括号的下一个token不是右括号，则说明函数有参数，这后面就是函数的参数
+                        //TODO:进行语义分析，而且参数的类型应该匹配！但是这里只有Int，暂时不考虑
+                        int paramNumRight = funcSymbol.getParam_num();
+                        int tempParamNum = 0;
+
+                        analyseAddMinusExpr();
+                        tempParamNum++;
+                        while (nextIf(TokenType.COMMA)!=null){
+                            tempParamNum++;
+                            analyseAddMinusExpr();
+                        }
+                        //如果参数数量和传入的参数数量不匹配则会报错！
+                        if (paramNumRight!=tempParamNum){
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                        }
+                        expect(TokenType.R_PAREN);
                     }
                     funcOff = funcSymbol.getFuncOffset();
                     localInstructions.add(new Instruction(Operation.call,funcOff));
@@ -888,7 +872,6 @@ public final class Analyser {
                         localInstructions.add(new Instruction(Operation.popn, ret_num));
                     }
                 }
-                expect(TokenType.R_PAREN);
             }else{
                 //这里说明这个语句是一个空语句，并不是赋值语句或者其他；仅仅是一个空语句，类似 b+1;这种
                 if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
@@ -1280,19 +1263,11 @@ public final class Analyser {
         switch (name){
             case "getint":
                 if (isInFunc){
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.scan_i));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
                     }
                 }else{
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     globalInstructions.add(new Instruction(Operation.scan_i));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1301,19 +1276,11 @@ public final class Analyser {
                 return true;
             case "getchar":
                 if (isInFunc){
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.scan_c));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
                     }
                 }else{
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     globalInstructions.add(new Instruction(Operation.scan_c));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1322,19 +1289,11 @@ public final class Analyser {
                 return true;
             case "getdouble":
                 if (isInFunc){
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.scan_f));
                     if (EmptyNoRet){
                         localInstructions.add(new Instruction(Operation.popn,1));
                     }
                 }else{
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     globalInstructions.add(new Instruction(Operation.scan_f));
                     if (EmptyNoRet){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1344,10 +1303,6 @@ public final class Analyser {
             case "putdouble":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.print_f));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1356,10 +1311,6 @@ public final class Analyser {
             case "putint":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.print_i));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1368,10 +1319,6 @@ public final class Analyser {
             case "putchar":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    if (globalSymbolTable.get(name)==null) {
-                        addGlobalSymbol(name, false, true, true, 0, peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.print_c));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1380,10 +1327,6 @@ public final class Analyser {
             case "putstr":
                 if (isInFunc){
                     analyseAddMinusExpr();
-                    if (globalSymbolTable.get(name)==null){
-                        addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.print_s));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1391,10 +1334,6 @@ public final class Analyser {
                 return  true;
             case "putln":
                 if (isInFunc){
-                    if (globalSymbolTable.get(name)==null){
-                        addGlobalSymbol(name,false,true,true,0,peek().getStartPos());
-                        globalName.add(name);
-                    }
                     localInstructions.add(new Instruction(Operation.add_i.println));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());

@@ -188,7 +188,7 @@ public class Tokenizer {
         if(it.peekChar()=='/'){
             token+=it.nextChar();
         }else{
-            throw new TokenizeError(ErrorCode.InvalidInput, it.previousPos());
+            return new Token(TokenType.DIV, '/', it.previousPos(), it.currentPos());
         }
         while(it.peekChar()!='\n'){
             token+=it.nextChar();
