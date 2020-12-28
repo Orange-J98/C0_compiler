@@ -353,9 +353,9 @@ public final class Analyser {
             analyseBlockStmt();
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
-            if (!isReturn) {
+            //TODO:Return很恶心
                 localInstructions.add(new Instruction(Operation.ret));
-            }
+
             if (ret_num>0){
                 funcTable.get(func_name).setInstructions(localInstructions);
                 funcTable.get(func_name).setLocVarNum(localSymbolTable.size());
