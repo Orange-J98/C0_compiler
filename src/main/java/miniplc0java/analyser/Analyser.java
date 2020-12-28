@@ -988,6 +988,8 @@ public final class Analyser {
             }
 
             switch (CompareSymbolToken.getTokenType()){
+                case NEQ:
+                    break;
                 case EQ:
                     //如果!=则没什么处理
                     localInstructions.add(new Instruction(Operation.not));
