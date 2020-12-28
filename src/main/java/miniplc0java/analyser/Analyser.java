@@ -773,15 +773,18 @@ public final class Analyser {
             String LeftName =(String) nameToken.getValue();
             if (nextIf(TokenType.ASSIGN)!=null){
                 //这里是赋值语句的左值！
-
                 if (isInFunc){
-                    int localOff = localSymbolTable.get(LeftName).getStackOffset();
-
-                    if (localSymbolTable.get(LeftName)==null){
+                    if (localSymbolTable.get(LeftName)!=null){
+                        int localOff = localSymbolTable.get(LeftName).getStackOffset();
+                        localSymbolTable.get(LeftName).setInitialized(true);
+                        localInstructions.add(new Instruction(Operation.loca, localOff));
+                    }else if (globalSymbolTable.get(LeftName)!=null){
+                        int globalOff = globalSymbolTable.get(LeftName).getStackOffset();
+                        globalSymbolTable.get(LeftName).setInitialized(true);
+                        globalInstructions.add(new Instruction(Operation.globa,globalOff));
+                    }else{
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
-                    localSymbolTable.get(LeftName).setInitialized(true);
-                    localInstructions.add(new Instruction(Operation.loca, localOff));
                 }else {
                     int globalOff;
 
@@ -1209,6 +1212,7 @@ public final class Analyser {
                 if (isInFunc){
                     var localSymbol = localSymbolTable.get(name);
                     var paramSymbol = paramTable.get(name);
+                    var globalSymbol = globalSymbolTable.get(name);
                     if (localSymbol!=null){
                         if (!localSymbol.isInitialized){
                             //标识符没初始化
@@ -1221,13 +1225,16 @@ public final class Analyser {
                         var paramOff = paramSymbol.getStackOffset();
                         localInstructions.add(new Instruction(Operation.arga,paramOff));
                         localInstructions.add(new Instruction(Operation.load_64));
+                    }else if(globalSymbol!=null){
+                        var globalOff = globalSymbol.getStackOffset();
+                        localInstructions.add(new Instruction(Operation.globa,globalOff));
+                        localInstructions.add(new Instruction(Operation.load_64));
                     }else {
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
 
                 }else{
                     var globalSymbol = globalSymbolTable.get(name);
-                    var paramSymbol = paramTable.get(name);
                     if (globalSymbol!=null){
                         if (!globalSymbol.isInitialized){
                             //标识符没初始化
@@ -1235,10 +1242,6 @@ public final class Analyser {
                         }
                         var globalOff = globalSymbol.getStackOffset();
                         globalInstructions.add(new Instruction(Operation.loca,globalOff));
-                        globalInstructions.add(new Instruction(Operation.load_64));
-                    }else if (paramSymbol!=null){
-                        var paramOff = paramSymbol.getStackOffset();
-                        globalInstructions.add(new Instruction(Operation.arga,paramOff));
                         globalInstructions.add(new Instruction(Operation.load_64));
                     }else {
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
