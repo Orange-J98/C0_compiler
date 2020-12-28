@@ -337,7 +337,14 @@ public final class Analyser {
                 ret_num = 1;
             }
             //这里是进入到一个函数体里面 {body}
-
+            //先将函数加入到函数表中，以用于递归，之后再完善指令集！
+            if (ret_num>0){
+                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size()-1, localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
+                funcName.add(func_name);
+            }else {
+                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size(), localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
+                funcName.add(func_name);
+            }
             analyseBlockStmt();
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
@@ -345,11 +352,13 @@ public final class Analyser {
                 localInstructions.add(new Instruction(Operation.ret));
             }
             if (ret_num>0){
-                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size()-1, localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
-                funcName.add(func_name);
+                funcTable.get(func_name).setInstructions(localInstructions);
+                funcTable.get(func_name).setLocVarNum(localSymbolTable.size());
+                funcTable.get(func_name).setBodyCnt(localInstructions.size());
             }else {
-                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size(), localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
-                funcName.add(func_name);
+                funcTable.get(func_name).setInstructions(localInstructions);
+                funcTable.get(func_name).setLocVarNum(localSymbolTable.size());
+                funcTable.get(func_name).setBodyCnt(localInstructions.size());
             }//这里应该已经分析函数完函数了
             isInFunc = false;
             isReturn = false;
