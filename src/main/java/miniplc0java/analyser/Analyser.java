@@ -781,7 +781,7 @@ public final class Analyser {
                     }else if (globalSymbolTable.get(LeftName)!=null){
                         int globalOff = globalSymbolTable.get(LeftName).getStackOffset();
                         globalSymbolTable.get(LeftName).setInitialized(true);
-                        globalInstructions.add(new Instruction(Operation.globa,globalOff));
+                        localInstructions.add(new Instruction(Operation.globa,globalOff));
                     }else{
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
