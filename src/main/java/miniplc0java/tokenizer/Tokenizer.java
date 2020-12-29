@@ -118,6 +118,9 @@ public class Tokenizer {
             it.nextChar();
             while(it.peekChar()!='\"'){
                 token = getEscapeSequence(token);
+                if(it.isEOF()){
+                    return new Token(TokenType.EOF,"",it.currentPos(),it.currentPos());
+                }
             }
             if (it.peekChar()=='\"'){
                 it.nextChar();

@@ -789,13 +789,22 @@ public final class Analyser {
                 //这里是赋值语句的左值！
                 if (isInFunc){
                     if (localSymbolTable.get(LeftName)!=null){
+                        if (localSymbolTable.get(LeftName).isConstant){
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                        }
                         int localOff = localSymbolTable.get(LeftName).getStackOffset();
                         localSymbolTable.get(LeftName).setInitialized(true);
                         localInstructions.add(new Instruction(Operation.loca, localOff));
                     }else if (paramTable.get(LeftName)!=null){
+                        if (paramTable.get(LeftName).isConstant){
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                        }
                         int paramOff = paramTable.get(LeftName).getStackOffset();
                         localInstructions.add(new Instruction(Operation.arga,paramOff));
                     }else if (globalSymbolTable.get(LeftName)!=null){
+                        if (globalSymbolTable.get(LeftName).isConstant){
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                        }
                         int globalOff = globalSymbolTable.get(LeftName).getStackOffset();
                         globalSymbolTable.get(LeftName).setInitialized(true);
                         localInstructions.add(new Instruction(Operation.globa,globalOff));
