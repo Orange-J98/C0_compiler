@@ -353,9 +353,9 @@ public final class Analyser {
             analyseBlockStmt();
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
-            //TODO:Return很恶心
+            if (!isReturn&&!ResRetInIf) {
                 localInstructions.add(new Instruction(Operation.ret));
-
+            }
             if (ret_num>0){
                 funcTable.get(func_name).setInstructions(localInstructions);
                 funcTable.get(func_name).setLocVarNum(localSymbolTable.size());
@@ -499,36 +499,51 @@ public final class Analyser {
 
     //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
     boolean isInIf = false;
+    boolean returnInIf = false;
+    boolean ResRetInIf =false;
+
     private void analyseIfStmt() throws CompileError{
+
         expect(TokenType.IF_KW);
         //这里只可能是比较语句
-        analyseCompareExpr(false);
+        analyseCompareExpr();
+        localInstructions.add(new Instruction(Operation.br_true, 1));
+
         isInIf = true;
         int startIf = localInstructions.size();
         //这里需要填入当判断为false时的跳转，需要跳转到结构体结尾的下一个操作符
         localInstructions.add(new Instruction(Operation.br,0));
         int index = startIf;
+
         analyseBlockStmt();
+
+        if (returnInIf == true){
+            ResRetInIf = true;
+            ResRetInIf = ResRetInIf&returnInIf;
+            returnInIf = false;
+        }
+
         int jump = localInstructions.size()-startIf;
         localInstructions.get(index).setX(jump);
         isInIf = false;
-
         //这里需要设置结构体执行完后的跳转,finish跳转
         localInstructions.add(new Instruction(Operation.br,0));
-
         int tempIndex = localInstructions.size()-1;
         Stack<Integer> Index = new Stack<>();
         Index.push(tempIndex);
         int tempStartOff = tempIndex+1;
         Stack<Integer>Offset = new Stack<>();
         Offset.push(tempStartOff);
-
         int elseNum = 0;
+
+        boolean needElse = false;
+
         while (check(TokenType.ELSE_KW)){
             next();
             if (check(TokenType.IF_KW)){
                 next();
-                analyseCompareExpr(false);
+                analyseCompareExpr();
+                localInstructions.add(new Instruction(Operation.br_true, 1));
                 //这里是为false时候的跳转
                 isInIf = true;
                 int newStartIf = localInstructions.size();
@@ -538,10 +553,15 @@ public final class Analyser {
 
                 analyseBlockStmt();
 
+                if (returnInIf == true){
+                    ResRetInIf = ResRetInIf&returnInIf;
+                    returnInIf = false;
+                }else{
+                    ResRetInIf = false;
+                }
                 int newJump = localInstructions.size()-newStartIf;
                 localInstructions.get(newIndex).setX(newJump);
                 isInIf = false;
-
                 //这里应该是执行结束后的跳转
                 localInstructions.add(new Instruction(Operation.br,0));
                 int NewIndex = localInstructions.size()-1;
@@ -550,8 +570,16 @@ public final class Analyser {
                 Offset.push(NewStartOff);
             }else{
                 isInIf = true;
+                needElse = true;
                 elseNum++;
                 analyseBlockStmt();
+                if (returnInIf == true){
+                    ResRetInIf = ResRetInIf&returnInIf;
+                    returnInIf = false;
+                }else{
+                    ResRetInIf = ResRetInIf&returnInIf;
+                }
+
                 isInIf = false;
                 break;
             }
@@ -564,13 +592,24 @@ public final class Analyser {
 
         }
         if (check(TokenType.ELSE_KW)){
+            isInIf = true;
+            needElse =true;
             elseNum++;
             next();
             analyseBlockStmt();
+            if (returnInIf == true){
+                ResRetInIf = ResRetInIf&returnInIf;
+                returnInIf = false;
+            }else{
+                ResRetInIf = ResRetInIf&returnInIf;
+            }
+            isInIf = false;
         }
         if (elseNum>1){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
+        ResRetInIf = (isReturn |ResRetInIf)&needElse;
+
     }
 
     //    while_stmt -> 'while' expr block_stmt
@@ -586,10 +625,12 @@ public final class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
         if (nextIf(TokenType.L_PAREN)!=null){
-            analyseCompareExpr(false);
+            analyseCompareExpr();
+            localInstructions.add(new Instruction(Operation.br_true, 1));
             expect(TokenType.R_PAREN);
         }else {
-            analyseCompareExpr(false);
+            analyseCompareExpr();
+            localInstructions.add(new Instruction(Operation.br_true, 1));
         }//分析结构体
         //TODO:break,continue,return
         int judgeFalseOff = localInstructions.size();
@@ -645,7 +686,12 @@ public final class Analyser {
     //    return_stmt -> 'return' expr? ';'
     private void analyseReturnStmt() throws CompileError{
         expect(TokenType.RETURN_KW);
-        isReturn = true;
+
+        if (isInIf){
+            returnInIf = true;
+        }else {
+            isReturn = true;
+        }
         int ret_num = globalSymbolTable.get(CurfuncName).getVariableType();
 
         if (checkNextIfExpr()){
@@ -928,7 +974,7 @@ public final class Analyser {
             }
         }else{
             //这里也是单独一个计算式，不过可能第一个不是变量，而是一个数字；
-            analyseCompareExpr(true);
+            analyseCompareExpr();
             if (isInFunc){
                 localInstructions.add(new Instruction(Operation.popn,1));
             }
@@ -974,7 +1020,7 @@ public final class Analyser {
     }
 
     //判断语句
-    private void analyseCompareExpr(boolean isEmptyStat) throws CompileError{
+    private void analyseCompareExpr() throws CompileError{
         analyseAddMinusExpr();
         if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
             //TODO:这里只考虑了Int
@@ -1010,10 +1056,6 @@ public final class Analyser {
                     break;
                 default:
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-
-            }
-            if (!isEmptyStat) {
-                localInstructions.add(new Instruction(Operation.br_true, 1));
             }
         }
     }
