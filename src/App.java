@@ -67,7 +67,7 @@ public class App {
         for (int num:maigicVersion){
             toBinary_8(Binary,num);
         }
-        toBinary_32(Binary,analyzer.getGlobalCounts());
+        toBinary_32(Binary, globalName.size());
         for(String tempGlobalName:globalName){
             SymbolEntry tempGlobalEntry = globalTable.get(tempGlobalName);
             if (tempGlobalEntry.isConstant()){
@@ -82,7 +82,7 @@ public class App {
                 StrToBinary(Binary,tempGlobalEntry.getGlobal_value());
             }
         }
-        toBinary_32(Binary,analyzer.getFuncCounts());
+        toBinary_32(Binary, funcName.size());
         for (String tempFuncName:funcName){
             FuncEntry funcEntry = funcTable.get(tempFuncName);
             toBinary_32(Binary,funcEntry.getFunc_name());
@@ -95,7 +95,11 @@ public class App {
                     toBinary_8(Binary,instruction.getOptNum());
                 }else {
                     toBinary_8(Binary,instruction.getOptNum());
-                    toBinary_64(Binary,instruction.getX());
+                    if (instruction.getOptNum()== 0x01){
+                        toBinary_64(Binary,instruction.getX());
+                    }else{
+                        toBinary_32(Binary,instruction.getX());
+                    }
                 }
             }
         }
@@ -111,19 +115,24 @@ public class App {
             e.printStackTrace();
         }
 
-//        for (String globalN: globalName){
-//            SymbolEntry globalS = globalTable.get(globalN);
-//            output.println(globalN+": "+globalS.getStackOffset()+"  "+globalS.getGlobal_value());
-//        }
-//        output.println();
-//        for (String tempFuncName:funcName){
-//            FuncEntry tempFuncEntry = funcTable.get(tempFuncName);
-//            output.println("fn "+tempFuncName+" ["+globalTable.get(tempFuncName).getStackOffset()+"] "+tempFuncEntry.getLocVarNum()+" "+tempFuncEntry.getParam_num()+" -> "+tempFuncEntry.getRet_num());
-//            for (Instruction instruction : tempFuncEntry.getInstructions()) {
-//                output.println(instruction.toString());
-//            }
-//            output.println();
-//        }
+        output.println();
+        output.println("Global_counts:"+globalName.size());
+        for (String globalN: globalName){
+            SymbolEntry globalS = globalTable.get(globalN);
+            output.println(globalN+": "+globalS.getStackOffset()+"  "+globalS.getGlobal_value());
+        }
+
+        output.println("Func_counts:"+funcName.size());
+        output.println();
+
+        for (String tempFuncName:funcName){
+            FuncEntry tempFuncEntry = funcTable.get(tempFuncName);
+            output.println("fn "+tempFuncName+" ["+globalTable.get(tempFuncName).getStackOffset()+"] "+tempFuncEntry.getLocVarNum()+" "+tempFuncEntry.getParam_num()+" -> "+tempFuncEntry.getRet_num());
+            for (Instruction instruction : tempFuncEntry.getInstructions()) {
+                output.println(instruction.toString());
+            }
+            output.println();
+        }
 
     }
 
@@ -133,9 +142,7 @@ public class App {
     }
     private  static void toBinary_8 (ArrayList<Byte>Binary,int num)
     {
-        for (int i=0;i>=0;i--) {
-            Binary.add((byte) (num >> (8 * i) & 0xff));
-        }
+            Binary.add((byte)num);
     }
 
     private  static void toBinary_32 (ArrayList<Byte>Binary,int num)
@@ -147,8 +154,9 @@ public class App {
 
     private  static void toBinary_64 (ArrayList<Byte>Binary,int num)
     {
+        long newNum = (long)num;
         for (int i=7;i>=0;i--) {
-            Binary.add((byte) (num >> (8 * i) & 0xff));
+            Binary.add((byte) (newNum >> (8 * i) & 0xff));
         }
     }
 

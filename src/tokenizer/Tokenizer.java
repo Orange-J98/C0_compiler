@@ -1,7 +1,6 @@
 package tokenizer;
 import error.*;
 import  util.Pos;
-import java.util.regex.*;
 
 public class Tokenizer {
     private StringIter it;
@@ -22,16 +21,14 @@ public class Tokenizer {
         if(it.isEOF()){
             return new Token(TokenType.EOF,"",it.currentPos(),it.currentPos());
         }
-
         char peek = it.peekChar();
+
         if(Character.isDigit(peek)){
             return UIntOrDouble();
         }else if(Character.isAlphabetic(peek)||peek=='_'){
             return IdentOrKeyword();
         }else if(peek=='"'||peek=='\''){
             return StringOrChar();
-        }else if(peek=='/'){
-            return lexComent();
         }else{
             return OperatorOrUnknow();
         }
@@ -118,6 +115,9 @@ public class Tokenizer {
             it.nextChar();
             while(it.peekChar()!='\"'){
                 token = getEscapeSequence(token);
+                if(it.isEOF()){
+                    return new Token(TokenType.EOF,"",it.currentPos(),it.currentPos());
+                }
             }
             if (it.peekChar()=='\"'){
                 it.nextChar();
@@ -146,37 +146,40 @@ public class Tokenizer {
     //识别转义字符
     private String getEscapeSequence(String token) throws TokenizeError {
         if(it.peekChar()=='\\'){
-            token+=it.nextChar();
-            if(it.peekChar()=='\\'||it.peekChar()=='\"'||it.peekChar()=='\''||it.peekChar()=='n'||it.peekChar()=='r'||it.peekChar()=='t'){
-                token+=it.nextChar();
-                return token;
-            }else{
-                throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+            it.nextChar();
+            switch (it.peekChar()){
+                case '\\':
+                    token+='\\';
+                    it.nextChar();
+                    return token;
+                case '"':
+                    token+='\"';
+                    it.nextChar();
+                    return token;
+                case '\'':
+                    token+='\'';
+                    it.nextChar();
+                    return token;
+                case 'n':
+                    token+='\n';
+                    it.nextChar();
+                    return token;
+                case 't':
+                    token+='\t';
+                    it.nextChar();
+                    return token;
+                case 'r':
+                    token+='\r';
+                    it.nextChar();
+                    return token;
+                default:
+                    throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
             }
         }
         token += it.nextChar();
         return token;
     }
 
-    //识别注释
-    private Token lexComent() throws TokenizeError{
-        String token = "";
-        Pos startpos1 = it.currentPos();
-        token+=it.nextChar();
-        if(it.peekChar()=='/'){
-            token+=it.nextChar();
-        }else{
-            throw new TokenizeError(ErrorCode.InvalidInput, it.previousPos());
-        }
-        while(it.peekChar()!='\n'){
-            token+=it.nextChar();
-        }
-        if(it.peekChar()=='\n'){
-            token+=it.nextChar();
-        }
-        Pos endpos1 = it.currentPos();
-        return new Token(TokenType.COMMENT,token,startpos1,endpos1);
-    }
 
     //识别常量
     private Token OperatorOrUnknow() throws TokenizeError{
@@ -193,6 +196,11 @@ public class Tokenizer {
             case '*':
                 return new Token(TokenType.MUL, '*', it.previousPos(), it.currentPos());
             case '/':
+                if (it.peekChar()=='/'){
+                    it.nextChar();
+                    while (it.nextChar()!='\n');
+                    return nextToken();
+                }
                 return new Token(TokenType.DIV, '/', it.previousPos(), it.currentPos());
             case '=':
                 if (it.peekChar()=='='){
