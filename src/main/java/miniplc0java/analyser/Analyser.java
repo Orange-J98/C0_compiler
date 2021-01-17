@@ -1148,8 +1148,22 @@ public final class Analyser {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
             }else if (check(TokenType.CHAR_LITERAL)){
-                //TODO:拓展部分，需要考虑char情况！
-                next();
+                //对字符串char的处理
+                //对于char类型，只会出现在putChar中，而且Char要加入到全局变量表当中;
+                var charToken = expect(TokenType.CHAR_LITERAL);
+                String charName = (String) charToken.getValue();
+                if (globalSymbolTable.get(charName)==null){
+                    addGlobalSymbol(charName,false,true,true,0,peek().getStartPos());
+                    globalName.add(charName);
+                }
+                //获取当前全局变量表的偏移量;
+                int globalOff = globalSymbolTable.get(charName).getStackOffset();
+                if (isInFunc){
+                    localInstructions.add(new Instruction(Operation.push,globalOff));
+                }else{
+                    //putChar函数一定在某一个函数当中出现，不可能作为全局变量出现，所以应该报错;
+                    throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                }
             }else{
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }
