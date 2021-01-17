@@ -129,13 +129,14 @@ public class Tokenizer {
         }else if(it.peekChar() == '\''){
             //char字符串
             it.nextChar();
+            char charToken = 0;
             while(it.peekChar()!='\''){
-                token = getEscapeSequence(token);
+                charToken = getEscapeSequence(token).charAt(0);
             }
             if (it.peekChar()=='\''){
                 it.nextChar();
                 Pos endpos1 = it.currentPos();
-                return new Token(TokenType.CHAR_LITERAL,token,startpos1,endpos1);
+                return new Token(TokenType.CHAR_LITERAL,charToken,startpos1,endpos1);
             }else{
                 throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
             }
