@@ -1,7 +1,6 @@
 package miniplc0java.tokenizer;
 import miniplc0java.error.*;
 import  miniplc0java.util.Pos;
-import java.util.regex.*;
 
 public class Tokenizer {
     private StringIter it;
@@ -22,16 +21,14 @@ public class Tokenizer {
         if(it.isEOF()){
             return new Token(TokenType.EOF,"",it.currentPos(),it.currentPos());
         }
-
         char peek = it.peekChar();
+
         if(Character.isDigit(peek)){
             return UIntOrDouble();
         }else if(Character.isAlphabetic(peek)||peek=='_'){
             return IdentOrKeyword();
         }else if(peek=='"'||peek=='\''){
             return StringOrChar();
-        }else if(peek=='/'){
-            return lexComent();
         }else{
             return OperatorOrUnknow();
         }
@@ -183,25 +180,6 @@ public class Tokenizer {
         return token;
     }
 
-    //识别注释
-    private Token lexComent() throws TokenizeError{
-        String token = "";
-        Pos startpos1 = it.currentPos();
-        token+=it.nextChar();
-        if(it.peekChar()=='/'){
-            token+=it.nextChar();
-        }else{
-            return new Token(TokenType.DIV, '/', it.previousPos(), it.currentPos());
-        }
-        while(it.peekChar()!='\n'){
-            token+=it.nextChar();
-        }
-        if(it.peekChar()=='\n'){
-            token+=it.nextChar();
-        }
-        Pos endpos1 = it.currentPos();
-        return new Token(TokenType.COMMENT,token,startpos1,endpos1);
-    }
 
     //识别常量
     private Token OperatorOrUnknow() throws TokenizeError{
@@ -218,6 +196,11 @@ public class Tokenizer {
             case '*':
                 return new Token(TokenType.MUL, '*', it.previousPos(), it.currentPos());
             case '/':
+                if (it.peekChar()=='/'){
+                    it.nextChar();
+                    while (it.nextChar()!='\n');
+                    return nextToken();
+                }
                 return new Token(TokenType.DIV, '/', it.previousPos(), it.currentPos());
             case '=':
                 if (it.peekChar()=='='){
