@@ -17,8 +17,6 @@ import java.util.*;
 public final class Analyser {
 
     Tokenizer tokenizer;
-//    /** 指令集 */
-//    ArrayList<Instruction> instructions = new ArrayList<>();;
     /** 当前偷看的 token */
     Token peekedToken = null;
     /** 供全局变量使用的指令集 */
@@ -91,12 +89,6 @@ public final class Analyser {
             return null;
         }
     }
-    public int getGlobalCounts() throws TokenizeError{
-        return globalSymbolTable.size();
-    }
-    public int getFuncCounts() throws TokenizeError{
-        return funcTable.size();
-    }
 
     public HashMap<String, SymbolEntry> getGlobalSymbolTable() {
         return globalSymbolTable;
@@ -135,7 +127,6 @@ public final class Analyser {
     private int getNextFuncOff(){
         return this.nextFuncOff++;
     }
-
     private int getNextParamOff(){
         return this.nextParamOff++;
     }
@@ -148,6 +139,7 @@ public final class Analyser {
      * @param curPos        当前 token 的位置（报错用）
      * @throws AnalyzeError 如果重复定义了则抛异常
      */
+
     private void addLocalSymbol(String name, boolean isInitialized, boolean isConstant, int variableType,Pos curPos) throws AnalyzeError {
         if (this.localSymbolTable.get(name) != null) {
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration, curPos);
@@ -157,7 +149,6 @@ public final class Analyser {
             this.localSymbolTable.put(name, new SymbolEntry(isConstant, isInitialized, getNextLocOff(),variableType));
         }
     }
-
     private void addParamSymbol(String name,boolean isConstant, int variableType,Pos curPos) throws AnalyzeError {
         if (this.paramTable.get(name) != null) {
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration, curPos);
@@ -169,7 +160,6 @@ public final class Analyser {
             this.paramTable.put(name, new SymbolEntry(isConstant, true, getNextParamOff(),variableType));
         }
     }
-
     private void addGlobalSymbol(String name, boolean isFunc,boolean isStr, boolean isConstant, int type,Pos curPos) throws AnalyzeError {
         if (this.globalSymbolTable.get(name) != null&&!isStr) {
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration, curPos);
@@ -191,7 +181,6 @@ public final class Analyser {
             }
         }
     }
-
     private void addFuncSymbol(String name, int func_global_num,int ret_num,int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions,HashMap<String,SymbolEntry> paramSymbolEntry,Pos curPos)throws AnalyzeError{
         if (this.funcTable.get(name)!=null){
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration,curPos);
@@ -200,15 +189,6 @@ public final class Analyser {
             this.funcTable.put(name,new FuncEntry(func_global_num,ret_num,param_num,locVarNum,bodyCnt,instructions,getNextFuncOff(),paramSymbolEntry));
         }
     }
-
-
-    /**
-     * 设置符号为已赋值
-     *
-     * @param name   符号名称
-     * @param curPos 当前位置（报错用）
-     * @throws AnalyzeError 如果未定义则抛异常
-     */
     private void initializeLocalSymbol(String name, Pos curPos) throws AnalyzeError {
         var entry = this.localSymbolTable.get(name);
         if (entry == null) {
@@ -217,15 +197,6 @@ public final class Analyser {
             entry.setInitialized(true);
         }
     }
-
-    /**
-     * 获取变量在栈上的偏移
-     *
-     * @param name   符号名
-     * @param curPos 当前位置（报错用）
-     * @return 栈偏移
-     * @throws AnalyzeError
-     */
     private int getOffset(String name, Pos curPos) throws AnalyzeError {
         var entry = this.localSymbolTable.get(name);
         if (entry == null) {
@@ -234,24 +205,6 @@ public final class Analyser {
             return entry.getStackOffset();
         }
     }
-
-    /**
-     * 获取变量是否是常量
-     *
-     * @param name   符号名
-     * @param curPos 当前位置（报错用）
-     * @return 是否为常量
-     * @throws AnalyzeError
-     */
-    private boolean isConstant(String name, Pos curPos) throws AnalyzeError {
-        var entry = this.localSymbolTable.get(name);
-        if (entry == null) {
-            throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
-        } else {
-            return entry.isConstant();
-        }
-    }
-
     private void analyseProgram() throws CompileError {
         // 程序
         //program -> item*
@@ -266,7 +219,6 @@ public final class Analyser {
         if(funcTable.get("main")==null){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
-
         int mainOff = funcTable.get("main").funcOffset;
         int mainRet_num = funcTable.get("main").getRet_num();
         //TODO:只考虑int
@@ -280,9 +232,7 @@ public final class Analyser {
         }
         addGlobalSymbol("_start",true,false,true,0,peek().getStartPos());
         globalName.add("_start");
-
         int _startGlobalOff = globalSymbolTable.get("_start").stackOffset;
-
         funcTable.get("_start").setFunc_name(_startGlobalOff);
         funcTable.get("_start").setBodyCnt(globalInstructions.size());
         funcTable.get("_start").setInstructions(globalInstructions);
@@ -294,7 +244,6 @@ public final class Analyser {
     //item -> function | decl_stmt
     //program -> item*
     String CurfuncName = "";
-    boolean isReturn = false;
     int shouldRetType = 0;
 
     private void analyseItem() throws CompileError {
@@ -323,6 +272,7 @@ public final class Analyser {
                 analyseFunctionParamList();
             }
             expect(TokenType.R_PAREN);
+
             expect(TokenType.ARROW);
             int ret_num = analyseTy();
             shouldRetType = ret_num;
@@ -350,10 +300,16 @@ public final class Analyser {
                 funcName.add(func_name);
             }
 
-            analyseBlockStmt();
+            boolean [] bool = analyseBlockStmt(false);
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
-            if (!isReturn) {
+            //TODO:return
+            Boolean isReturn = bool[0];
+
+
+            if (ret_num>0&&!isReturn) {
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+            }else {
                 localInstructions.add(new Instruction(Operation.ret));
             }
             if (ret_num>0){
@@ -366,7 +322,6 @@ public final class Analyser {
                 funcTable.get(func_name).setBodyCnt(localInstructions.size());
             }//这里应该已经分析函数完函数了
             isInFunc = false;
-            isReturn = false;
             nextLocOff = 0;
             CurfuncName = "";
         }else if(check(TokenType.LET_KW)||check(TokenType.CONST_KW)){
@@ -445,16 +400,21 @@ public final class Analyser {
 //    | return_stmt
 //    | block_stmt
 //    | empty_stmt
-    boolean isBreak = false, isContinue = false, isRet = false;
-    private void analyseBlockStmt() throws CompileError{
+    private boolean [] analyseBlockStmt(boolean isInWhile) throws CompileError{
 
         expect(TokenType.L_BRACE);
+        boolean[] oldBool = {false,false,false};
         while(checkNextIfStmt()){
-            analyseStmt();
+            boolean[] newBool = analyseStmt(isInWhile);
+            for (int i = 0; i<3; i++) {
+                oldBool[i] = newBool[i] || oldBool[i];
+            }
         }
         expect(TokenType.R_BRACE);
+        return oldBool;
     }
-    private void analyseStmt() throws CompileError{
+    private boolean[] analyseStmt(boolean isInWhile) throws CompileError{
+        boolean [] bool = {false,false,false};
         if(checkNextIfExpr()){
             //    expr_stmt -> expr ';'
             analyseExpr();
@@ -467,45 +427,49 @@ public final class Analyser {
             analyseDeclStmt();
         }else if (check(TokenType.IF_KW)){
             //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
-            analyseIfStmt();
+            bool = analyseIfStmt(isInWhile);
         }else if(check(TokenType.WHILE_KW)){
             //    while_stmt -> 'while' expr block_stmt
+            isInWhile = true;
             analyseWhile();
         }else if(check(TokenType.BREAK_KW)){
             //    break_stmt -> 'break' ';'
-            isBreak = true;
+            bool[0] = true;
             analyseBreakStmt();
             if (isInFunc){
                 localInstructions.add(new Instruction(Operation.br,0));
             }
         }else if(check(TokenType.CONTINUE_KW)){
             //    continue_stmt -> 'continue' ';'
-            isContinue = true;
+            bool[1] = true;
             analyseContinueStmt();
         }else if (check(TokenType.RETURN_KW)){
             //    return_stmt -> 'return' expr? ';'
-            isRet = true;
+            bool[2] = true;
             analyseReturnStmt();
         }else if (check(TokenType.L_BRACE)){
             //    block_stmt -> '{' stmt* '}'
-            analyseBlockStmt();
+            bool = analyseBlockStmt(isInWhile);
         }else if(check(TokenType.SEMICOLON)){
             //    empty_stmt -> ';'
             next();
         }else{
             throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
         }
+        return bool;
     }
 
     //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
     boolean isInIf = false;
-    private void analyseIfStmt() throws CompileError{
+    private boolean [] analyseIfStmt(boolean isInWhile) throws CompileError{
+        boolean isReturn = false;
+        boolean isContinue = false;
+        boolean isBreak = false;
 
         expect(TokenType.IF_KW);
         //这里只可能是比较语句
         analyseCompareExpr();
         localInstructions.add(new Instruction(Operation.br_true, 1));
-
         isInIf = true;
 
         int startIf = localInstructions.size();
@@ -513,7 +477,10 @@ public final class Analyser {
         localInstructions.add(new Instruction(Operation.br,0));
         int index = startIf;
 
-        analyseBlockStmt();
+        boolean [] bool = analyseBlockStmt(isInWhile);
+        isReturn = bool[0];
+        isContinue = bool[1];
+        isBreak = bool[2];
 
         int jump = localInstructions.size()-startIf;
         localInstructions.get(index).setX(jump);
@@ -530,8 +497,7 @@ public final class Analyser {
         Offset.push(tempStartOff);
         int elseNum = 0;
 
-        boolean needElse = false;
-
+        boolean isElse = false;
         while (check(TokenType.ELSE_KW)){
             next();
             if (check(TokenType.IF_KW)){
@@ -544,7 +510,11 @@ public final class Analyser {
                 //这里需要填入当判断为false时的跳转，需要跳转到结构体结尾的下一个操作符
                 localInstructions.add(new Instruction(Operation.br,0));
 
-                analyseBlockStmt();
+                bool = analyseBlockStmt(isInWhile);
+                isReturn &= bool[0];
+                isContinue &=bool [1];
+                isBreak &= bool[2];
+
                 int newJump = localInstructions.size()-newStartIf;
                 localInstructions.get(newStartIf).setX(newJump);
                 isInIf = false;
@@ -556,14 +526,22 @@ public final class Analyser {
                 Offset.push(NewStartOff);
             }else{
                 isInIf = true;
-                needElse = true;
                 elseNum++;
-                analyseBlockStmt();
+                bool = analyseBlockStmt(isInWhile);
+                isReturn &= bool[0];
+                isContinue &=bool [1];
+                isBreak &= bool[2];
+                isElse =true;
                 isInIf = false;
-
                 break;
             }
         }
+        if (!isElse){
+            isElse = false;
+            isBreak = false;
+            isContinue = false;
+        }
+
         int EndOffset = localInstructions.size();
         while (!Offset.empty()&&!Index.empty()){
             int OneOff =Offset.pop();
@@ -573,12 +551,12 @@ public final class Analyser {
         if (elseNum>1){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
+        return new boolean[]{isReturn,isContinue,isBreak};
     }
 
     //    while_stmt -> 'while' expr block_stmt
-    boolean isInWhile = false;
+
     private void analyseWhile() throws CompileError{
-        isInWhile =true;
         expect(TokenType.WHILE_KW);
         int whileStartOff=localInstructions.size();
         if (isInFunc){
@@ -600,25 +578,25 @@ public final class Analyser {
         localInstructions.add(new Instruction(Operation.br,0));
         int judgeIndex = judgeFalseOff;
         expect(TokenType.L_BRACE);
-        isBreak = false;
-        isContinue = false;
-        isRet = false;
+        boolean[] bool = {false,false,false};
+
         while(checkNextIfStmt()){
-            analyseStmt();
-            if (isContinue||isRet||isBreak){
+            bool = analyseStmt(true);
+            if (bool[0]||bool[1]||bool[2]){
                 //不在If里面的情况
-                if (isContinue){
+                if (bool[1]){
                     if (isInIf) {
                         int ContinueOff = localInstructions.size();
                         localInstructions.add(new Instruction(Operation.br, whileStartOff - ContinueOff));
                     }
-                } else if (isBreak) {
+                } else if (bool[2]) {
                     localInstructions.add(new Instruction(Operation.br,0));
                 }
                 break;
             }
         }
-        if (isContinue||isRet||isBreak){
+
+        if (bool[0]||bool[1]||bool[2]){
             var nextToken = next();
             while (!nextToken.getTokenType().equals(TokenType.R_BRACE)){
                 nextToken = next();
@@ -631,10 +609,6 @@ public final class Analyser {
         int finishOff = localInstructions.size();
         localInstructions.get(judgeIndex).setX(finishOff-judgeFalseOff-1);
         //结构体分析结束！
-        isRet = false;
-        isContinue = false;
-        isBreak = false;
-        isInWhile = false;
     }
     //    break_stmt -> 'break' ';'
     private void analyseBreakStmt() throws CompileError{
@@ -650,7 +624,6 @@ public final class Analyser {
     private void analyseReturnStmt() throws CompileError{
         expect(TokenType.RETURN_KW);
 
-        isReturn = true;
         int ret_num = globalSymbolTable.get(CurfuncName).getVariableType();
 
         if (checkNextIfExpr()){
