@@ -641,16 +641,14 @@ public final class Analyser {
         expect(TokenType.RETURN_KW);
 
         int ret_num = globalSymbolTable.get(CurfuncName).getVariableType();
+
         if (checkNextIfExpr()){
             if (ret_num<=0){
                 throw new AnalyzeError(ErrorCode.NoEnd,peek().getStartPos());
             }
             //arga 0 默认为返回值的Offset;
             localInstructions.add(new Instruction(Operation.arga,0));
-            int varType = analyseAddMinusExpr();
-            if (varType!=shouldRetType){
-                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-            }
+            analyseAddMinusExpr();
             localInstructions.add(new Instruction(Operation.store_64));
         }else if(ret_num>0){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -705,20 +703,12 @@ public final class Analyser {
             if (isInFunc){
                 int localOff = localSymbolTable.get(name).getStackOffset();
                 localInstructions.add(new Instruction(Operation.loca,localOff));
-
-                int varType = analyseAddMinusExpr();
-                if (varType!=variableType){
-                    throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                }
+                analyseAddMinusExpr();
                 localInstructions.add(new Instruction(Operation.store_64));
             }else{
                 int globalOff = globalSymbolTable.get(name).getStackOffset();
-
                 globalInstructions.add(new Instruction(Operation.globa,globalOff));
-                int varType = analyseAddMinusExpr();
-                if (varType!=variableType){
-                    throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                }
+                analyseAddMinusExpr();
                 globalInstructions.add(new Instruction(Operation.store_64));
             }
         }
@@ -1021,8 +1011,8 @@ public final class Analyser {
         }
     }
 
-    private int analyseAddMinusExpr() throws CompileError{
-        int varType = analyseMultiDivExpr();
+    private void analyseAddMinusExpr() throws CompileError{
+        analyseMultiDivExpr();
         boolean isAdd;
         while (check(TokenType.PLUS)||check(TokenType.MINUS)){
             if (nextIf(TokenType.PLUS)!=null){
@@ -1047,11 +1037,10 @@ public final class Analyser {
                 }
             }
         }
-        return varType;
     }
 
-    private int analyseMultiDivExpr() throws  CompileError{
-        int varType = analyseTypeChangeExpr();
+    private void analyseMultiDivExpr() throws  CompileError{
+        analyseTypeChangeExpr();
         boolean isMul = false;
         while (check(TokenType.MUL)||check(TokenType.DIV)){
             if (nextIf(TokenType.MUL)!=null){
@@ -1074,11 +1063,10 @@ public final class Analyser {
                 }
             }
         }
-        return varType;
     }
 
-    private int analyseTypeChangeExpr() throws CompileError{
-        int varType = analyseFactor();
+    private void analyseTypeChangeExpr() throws CompileError{
+        analyseFactor();
         /*或许不能用while*/
         while (check(TokenType.AS_KW)){
             next();
@@ -1097,13 +1085,11 @@ public final class Analyser {
                 }
             }
         }
-        return varType;
     }
 
-    private int analyseFactor() throws CompileError{
+    private void analyseFactor() throws CompileError{
         boolean negate = false;
         //这里是一个取翻表达式；
-        int varType = 0;
         while (check(TokenType.MINUS)){
             next();
             negate = !negate;
@@ -1114,7 +1100,6 @@ public final class Analyser {
             expect(TokenType.R_PAREN);
         }else if (check(TokenType.UINT_LITERAL)||check(TokenType.DOUBLE_LITERAL)||check(TokenType.STRING_LITERAL)||check(TokenType.CHAR_LITERAL)){
             if (check(TokenType.UINT_LITERAL)){
-                varType = 1;
                 var intToken = expect(TokenType.UINT_LITERAL);
                 int intNum = (int) intToken.getValue();
                 if (isInFunc){
@@ -1124,7 +1109,6 @@ public final class Analyser {
                 }
             }else if (check(TokenType.DOUBLE_LITERAL)){
                 //TODO:拓展部分，需要考虑double情况！
-                varType = 2;
                 next();
             }else if (check(TokenType.STRING_LITERAL)){
                 //对字符串String的处理
@@ -1147,7 +1131,6 @@ public final class Analyser {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
             }else if (check(TokenType.CHAR_LITERAL)){
-                varType = 1;
                 //对字符串char的处理
                 //对于char类型，只会出现在putChar中，而且Char要加入到全局变量表当中;
                 var charToken = expect(TokenType.CHAR_LITERAL);
@@ -1264,7 +1247,6 @@ public final class Analyser {
                 globalInstructions.add(new Instruction(Operation.neg_i));
             }
         }
-        return varType;
     }
     private boolean checkNextIfExpr() throws CompileError{
         var nextToken = peek();
