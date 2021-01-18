@@ -5,7 +5,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
+
+import miniplc0java.error.AnalyzeError;
 import miniplc0java.error.CompileError;
+import miniplc0java.error.ErrorCode;
 import miniplc0java.instruction.Instruction;
 import miniplc0java.instruction.Operation;
 import miniplc0java.tokenizer.StringIter;
@@ -148,7 +151,13 @@ public class App {
                     }else {
                         toBinary_8(Binary,instruction.getOptNum());
                         if (instruction.getOptNum()== 0x01){
-                            toBinary_64(Binary,instruction.getX());
+                            if (instruction.getY()<0&&instruction.getX()>=0){
+                                toBinary_64(Binary,instruction.getX());
+                            }else if (instruction.getX()<0&&instruction.getY()>=0){
+                                toBinary_64(Binary,instruction.getY());
+                            }else{
+                                throw new AnalyzeError(ErrorCode.InvalidInput, iter.currentPos());
+                            }
                         }else{
                             toBinary_32(Binary,instruction.getX());
                         }
@@ -184,9 +193,9 @@ public class App {
         }
     }
 
-    private  static void toBinary_64 (ArrayList<Byte>Binary,int num)
+    private  static void toBinary_64 (ArrayList<Byte>Binary,long num)
     {
-        long newNum = (long)num;
+        long newNum = num;
         for (int i=7;i>=0;i--) {
             Binary.add((byte) (newNum >> (8 * i) & 0xff));
         }
