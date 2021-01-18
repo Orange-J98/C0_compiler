@@ -1087,7 +1087,7 @@ public final class Analyser {
             }
         }
     }
-    boolean buff = false;
+
     private void analyseFactor() throws CompileError{
         boolean negate = false;
         //这里是一个取翻表达式；
@@ -1103,11 +1103,6 @@ public final class Analyser {
             if (check(TokenType.UINT_LITERAL)){
                 var intToken = expect(TokenType.UINT_LITERAL);
                 int intNum = (int) intToken.getValue();
-                if (intNum==10086){
-                    buff = true;
-                }else {
-                    buff = false;
-                }
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.push,intNum));
                 }else{
@@ -1214,13 +1209,6 @@ public final class Analyser {
                         var localOff = localSymbol.getStackOffset();
                         localInstructions.add(new Instruction(Operation.loca,localOff));
                         localInstructions.add(new Instruction(Operation.load_64));
-                        if (isInPutInt){
-                            if (name.equals("i")&&localSymbol.isInitialized&&buff){
-                                if (CurfuncName.equals("main")&&funcTable.get(CurfuncName).getRet_num()==0){
-                                    throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                                }
-                            }
-                        }
                     }else if (paramSymbol!=null){
                         var paramOff = paramSymbol.getStackOffset();
                         localInstructions.add(new Instruction(Operation.arga,paramOff));
@@ -1276,7 +1264,6 @@ public final class Analyser {
         }
     }
     //处理标准库函数
-    boolean isInPutInt = false;
     private boolean isStandardFunc(String name,boolean EmptyNoRet) throws CompileError{
         switch (name){
             case "getint":
@@ -1327,14 +1314,12 @@ public final class Analyser {
                 }
                 return  true;
             case "putint":
-                isInPutInt = true;
                 if (isInFunc){
                     analyseAddMinusExpr();
                     localInstructions.add(new Instruction(Operation.print_i));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-                isInPutInt = false;
                 return  true;
             case "putchar":
                 if (isInFunc){
