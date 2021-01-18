@@ -434,18 +434,18 @@ public final class Analyser {
             analyseWhile();
         }else if(check(TokenType.BREAK_KW)){
             //    break_stmt -> 'break' ';'
-            bool[0] = true;
+            bool[1] = true;
             analyseBreakStmt();
             if (isInFunc){
                 localInstructions.add(new Instruction(Operation.br,0));
             }
         }else if(check(TokenType.CONTINUE_KW)){
             //    continue_stmt -> 'continue' ';'
-            bool[1] = true;
+            bool[2] = true;
             analyseContinueStmt();
         }else if (check(TokenType.RETURN_KW)){
             //    return_stmt -> 'return' expr? ';'
-            bool[2] = true;
+            bool[0] = true;
             analyseReturnStmt();
         }else if (check(TokenType.L_BRACE)){
             //    block_stmt -> '{' stmt* '}'
