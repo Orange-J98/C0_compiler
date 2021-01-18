@@ -147,10 +147,10 @@ public class App {
                         toBinary_8(Binary,instruction.getOptNum());
                     }else {
                         toBinary_8(Binary,instruction.getOptNum());
-                        if (instruction.getOptNum()== 0x01){
+                        if (instruction.getY()<0){
                             toBinary_64(Binary,instruction.getX());
-                        }else{
-                            toBinary_32(Binary,instruction.getX());
+                        }else if (instruction.getX()<0){
+                            toBinary_64(Binary, (int) instruction.getY());
                         }
                     }
                 }
