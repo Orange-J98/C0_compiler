@@ -3,13 +3,12 @@ package miniplc0java.analyser;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import  miniplc0java.instruction.Instruction;
+import miniplc0java.instruction.Instruction;
 
 public class FuncEntry {
     /** func_name即为函数在全局变量表中的偏移量 */
     int func_name;
     int ret_num;
-    int retType;
     int param_num;
     int locVarNum;
     int bodyCnt;
@@ -17,10 +16,9 @@ public class FuncEntry {
     HashMap<String,SymbolEntry> paramSymbolEntry;
     ArrayList<Instruction> instructions;
 
-    public FuncEntry(int func_name, int ret_num, int retType,int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions, int funcOffset, HashMap<String,SymbolEntry> paramSymbolEntry) {
+    public FuncEntry(int func_name, int ret_num, int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions, int funcOffset, HashMap<String,SymbolEntry> paramSymbolEntry) {
         this.func_name = func_name;
         this.ret_num = ret_num;
-        this.retType = retType;
         this.param_num = param_num;
         this.locVarNum = locVarNum;
         this.bodyCnt = bodyCnt;
@@ -31,14 +29,6 @@ public class FuncEntry {
 
     public HashMap<String, SymbolEntry> getParamSymbolEntry() {
         return paramSymbolEntry;
-    }
-
-    public int getRetType() {
-        return retType;
-    }
-
-    public void setRetType(int retType) {
-        this.retType = retType;
     }
 
     public void setParamSymbolEntry(HashMap<String, SymbolEntry> paramSymbolEntry) {

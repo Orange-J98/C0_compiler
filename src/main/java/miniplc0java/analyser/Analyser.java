@@ -181,21 +181,36 @@ public final class Analyser {
             }
         }
     }
-    private void addFuncSymbol(String name, int func_global_num,int ret_num,int returnType,int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions,HashMap<String,SymbolEntry> paramSymbolEntry,Pos curPos)throws AnalyzeError{
+    private void addFuncSymbol(String name, int func_global_num,int ret_num,int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions,HashMap<String,SymbolEntry> paramSymbolEntry,Pos curPos)throws AnalyzeError{
         if (this.funcTable.get(name)!=null){
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration,curPos);
         }else {
             //func_global_num为函数在全局变量表中的offset，也即为func_name，是要最终输出为一个slot的东西。一个slot为1字节，即8位2进制，2位16进制
-            this.funcTable.put(name,new FuncEntry(func_global_num,ret_num,returnType,param_num,locVarNum,bodyCnt,instructions,getNextFuncOff(),paramSymbolEntry));
+            this.funcTable.put(name,new FuncEntry(func_global_num,ret_num,param_num,locVarNum,bodyCnt,instructions,getNextFuncOff(),paramSymbolEntry));
         }
     }
-
+    private void initializeLocalSymbol(String name, Pos curPos) throws AnalyzeError {
+        var entry = this.localSymbolTable.get(name);
+        if (entry == null) {
+            throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
+        } else {
+            entry.setInitialized(true);
+        }
+    }
+    private int getOffset(String name, Pos curPos) throws AnalyzeError {
+        var entry = this.localSymbolTable.get(name);
+        if (entry == null) {
+            throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
+        } else {
+            return entry.getStackOffset();
+        }
+    }
     private void analyseProgram() throws CompileError {
         // 程序
         //program -> item*
         //      item -> function | decl_stmt
 
-        addFuncSymbol("_start",-1,0, 0,0,0,-1,null,null,peek().getStartPos());
+        addFuncSymbol("_start",-1,0, 0,0,-1,null,null,peek().getStartPos());
         funcName.add("_start");
         while(!check(TokenType.EOF)){
             analyseItem();
@@ -221,14 +236,14 @@ public final class Analyser {
         funcTable.get("_start").setFunc_name(_startGlobalOff);
         funcTable.get("_start").setBodyCnt(globalInstructions.size());
         funcTable.get("_start").setInstructions(globalInstructions);
-        funcTable.get("_start").setParamSymbolEntry(new HashMap<>());
+        funcTable.get("_start").setParamSymbolEntry(new HashMap<String,SymbolEntry>());
         expect(TokenType.EOF);
     }
 
     // 程序
     //item -> function | decl_stmt
     //program -> item*
-    String CurFuncName = "";
+    String CurfuncName = "";
     int shouldRetType = 0;
 
     private void analyseItem() throws CompileError {
@@ -243,7 +258,7 @@ public final class Analyser {
             //首先是函数名
             var nameToken = expect(TokenType.IDENT);
             String func_name = (String) nameToken.getValue();
-            CurFuncName = func_name;
+            CurfuncName = func_name;
             expect(TokenType.L_PAREN);
             //这里是定义一个参数表，局部变量表，以及函数内的指令集，参数表和局部变量表应该会在函数编译结束后释放，指令集则被保存至函数表中
             localInstructions = new ArrayList<>();
@@ -260,7 +275,6 @@ public final class Analyser {
 
             expect(TokenType.ARROW);
             int ret_num = analyseTy();
-            int returnType = ret_num;
             shouldRetType = ret_num;
             if (ret_num>0){
                 for (SymbolEntry tempParam:paramTable.values()){
@@ -273,22 +287,23 @@ public final class Analyser {
             addGlobalSymbol(func_name,true,false,true,ret_num,curPos);
             globalName.add(func_name);
             if (ret_num==2){
+                //Todo:Double;
                 ret_num = 1;
             }
             //这里是进入到一个函数体里面 {body}
             //先将函数加入到函数表中，以用于递归，之后再完善指令集！
             if (ret_num>0){
-                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, returnType,paramTable.size()-1, localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
+                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size()-1, localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
                 funcName.add(func_name);
             }else {
-                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, returnType,paramTable.size(), localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
+                addFuncSymbol(func_name, globalSymbolTable.get(func_name).getStackOffset(), ret_num, paramTable.size(), localSymbolTable.size(), localInstructions.size(), localInstructions, paramTable, curPos);
                 funcName.add(func_name);
             }
 
             boolean [] bool = analyseBlockStmt(false,0,null);
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
-            boolean isReturn = bool[0];
+            Boolean isReturn = bool[0];
             if (ret_num>0&&!isReturn) {
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }else {
@@ -306,7 +321,7 @@ public final class Analyser {
             }//这里应该已经分析函数完函数了
             isInFunc = false;
             nextLocOff = 0;
-            CurFuncName = "";
+            CurfuncName = "";
         }else if(check(TokenType.LET_KW)||check(TokenType.CONST_KW)){
             //decl_stmt -> let_decl_stmt | const_decl_stmt
             //  let_decl_stmt -> 'let' IDENT ':' ty ('=' expr)? ';'
@@ -358,12 +373,15 @@ public final class Analyser {
         if(check(TokenType.IDENT)){
             var nameToken = next();
             String name =(String) nameToken.getValue();
-            return switch (name) {
-                case "void" -> 0;
-                case "int" -> 1;
-                case "double" -> 2;
-                default -> throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-            };
+            if (name.equals("void")){
+                return 0;
+            }else if(name.equals("int")){
+                return 1;
+            }else if (name.equals("double")){
+                return 2;
+            }else{
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+            }
         }else{
             throw new AnalyzeError(ErrorCode.InvalidInput,next().getStartPos());
         }
@@ -410,6 +428,7 @@ public final class Analyser {
             bool = analyseIfStmt(isInWhile,whileStart,breakOffset);
         }else if(check(TokenType.WHILE_KW)){
             //    while_stmt -> 'while' expr block_stmt
+            isInWhile = true;
             analyseWhile();
         }else if(check(TokenType.BREAK_KW)){
             //    break_stmt -> 'break' ';'
@@ -455,9 +474,9 @@ public final class Analyser {
     //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
     boolean isInIf = false;
     private boolean [] analyseIfStmt(boolean isInWhile, int whileStart, ArrayList<Integer>breakOffset) throws CompileError{
-        boolean isReturn;
-        boolean isContinue;
-        boolean isBreak;
+        boolean isReturn = false;
+        boolean isContinue = false;
+        boolean isBreak = false;
 
         expect(TokenType.IF_KW);
         //这里只可能是比较语句
@@ -468,6 +487,7 @@ public final class Analyser {
         int startIf = localInstructions.size();
         //这里需要填入当判断为false时的跳转，需要跳转到结构体结尾的下一个操作符
         localInstructions.add(new Instruction(Operation.br,0));
+        int index = startIf;
 
         boolean [] bool = analyseBlockStmt(isInWhile,whileStart,breakOffset);
         isReturn = bool[0];
@@ -475,7 +495,7 @@ public final class Analyser {
         isBreak = bool[2];
 
         int jump = localInstructions.size()-startIf;
-        localInstructions.get(startIf).setX(jump);
+        localInstructions.get(index).setX(jump);
 
         isInIf = false;
 
@@ -487,6 +507,7 @@ public final class Analyser {
         int tempStartOff = tempIndex+1;
         Stack<Integer>Offset = new Stack<>();
         Offset.push(tempStartOff);
+        int elseNum = 0;
 
         boolean isElse = false;
         while (check(TokenType.ELSE_KW)){
@@ -517,6 +538,7 @@ public final class Analyser {
                 Offset.push(NewStartOff);
             }else{
                 isInIf = true;
+                elseNum++;
                 bool = analyseBlockStmt(isInWhile,whileStart,breakOffset);
                 isReturn &= bool[0];
                 isContinue &=bool [1];
@@ -537,6 +559,9 @@ public final class Analyser {
             int OneOff =Offset.pop();
             int OneIndex = Index.pop();
             localInstructions.get(OneIndex).setX(EndOffset-OneOff);
+        }
+        if (elseNum>1){
+            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
         return new boolean[]{isReturn,isContinue,isBreak};
     }
@@ -566,12 +591,15 @@ public final class Analyser {
         //TODO:break,continue
         int judgeFalseOff = localInstructions.size();
         localInstructions.add(new Instruction(Operation.br,0));
+        int judgeIndex = judgeFalseOff;
         expect(TokenType.L_BRACE);
         boolean[] bool = {false,false,false};
+        boolean isBreak = false;
 
-        ArrayList<Integer> breakOffset = new ArrayList<>();
+        ArrayList<Integer> breakOffset = new ArrayList<Integer>();
         while(checkNextIfStmt()){
             bool = analyseStmt(true,whileStartOff,breakOffset);
+            isBreak = bool[2];
             if (bool[0]||bool[1]||bool[2]){
                 break;
             }
@@ -590,7 +618,7 @@ public final class Analyser {
 
 
         int finishOff = localInstructions.size();
-        localInstructions.get(judgeFalseOff).setX(finishOff-judgeFalseOff-1);
+        localInstructions.get(judgeIndex).setX(finishOff-judgeFalseOff-1);
 
         int nowOff = localInstructions.size()-1;
         for (int tempOff:breakOffset){
@@ -612,23 +640,21 @@ public final class Analyser {
     private void analyseReturnStmt() throws CompileError{
         expect(TokenType.RETURN_KW);
 
-        int ret_num = globalSymbolTable.get(CurFuncName).getVariableType();
-
+        int ret_num = globalSymbolTable.get(CurfuncName).getVariableType();
         if (checkNextIfExpr()){
             if (ret_num<=0){
                 throw new AnalyzeError(ErrorCode.NoEnd,peek().getStartPos());
             }
             //arga 0 默认为返回值的Offset;
             localInstructions.add(new Instruction(Operation.arga,0));
-            int numType = analyseAddMinusExpr();
-            if (numType!=ret_num){
+            int varType = analyseAddMinusExpr();
+            if (ret_num!=varType){
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }
             localInstructions.add(new Instruction(Operation.store_64));
         }else if(ret_num>0){
             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
-
         if (isInFunc){
             localInstructions.add(new Instruction(Operation.ret));
         }else{
@@ -641,7 +667,6 @@ public final class Analyser {
     //        let_decl_stmt -> 'let' IDENT ':' ty ('=' expr)? ';'
     //        const_decl_stmt -> 'const' IDENT ':' ty '=' expr ';'
     private void analyseDeclStmt() throws CompileError{
-
         if (check(TokenType.LET_KW)){
             analyseLetDeclStmt();
         }else if(check(TokenType.CONST_KW)) {
@@ -663,9 +688,7 @@ public final class Analyser {
         String name = (String) nameToken.getValue();
 
         expect(TokenType.COLON);
-
         int variableType = analyseTy();
-
         if (nextIf(TokenType.ASSIGN)!=null){
             isInit = true;
         }
@@ -677,15 +700,14 @@ public final class Analyser {
             addGlobalSymbol(name,false,false,false,variableType,curPos);
             globalName.add(name);
         }
-        int numType;
+
         if (isInit){
             if (isInFunc){
-
                 int localOff = localSymbolTable.get(name).getStackOffset();
                 localInstructions.add(new Instruction(Operation.loca,localOff));
 
-                numType = analyseAddMinusExpr();
-                if (numType!=variableType){
+                int varType = analyseAddMinusExpr();
+                if (varType!=variableType){
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
                 localInstructions.add(new Instruction(Operation.store_64));
@@ -693,8 +715,8 @@ public final class Analyser {
                 int globalOff = globalSymbolTable.get(name).getStackOffset();
 
                 globalInstructions.add(new Instruction(Operation.globa,globalOff));
-                numType = analyseAddMinusExpr();
-                if (numType!=variableType){
+                int varType = analyseAddMinusExpr();
+                if (varType!=variableType){
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
                 globalInstructions.add(new Instruction(Operation.store_64));
@@ -735,15 +757,24 @@ public final class Analyser {
             return true;
         }
         var nextToken = peek();
-        return switch (nextToken.getTokenType()) {
-            case LET_KW, L_BRACE, CONST_KW, IF_KW, WHILE_KW, BREAK_KW, CONTINUE_KW, RETURN_KW, SEMICOLON -> true;
-            default -> false;
-        };
+        switch (nextToken.getTokenType()){
+            case LET_KW:
+            case L_BRACE:
+            case CONST_KW:
+            case IF_KW:
+            case WHILE_KW:
+            case BREAK_KW:
+            case CONTINUE_KW:
+            case RETURN_KW:
+            case SEMICOLON:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /** 表达式部分 */
     private void analyseExpr() throws CompileError{
-        int varType;
         if (check(TokenType.IDENT)){
             var nameToken = expect(TokenType.IDENT);
             String LeftName =(String) nameToken.getValue();
@@ -755,7 +786,6 @@ public final class Analyser {
                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                         }
                         int localOff = localSymbolTable.get(LeftName).getStackOffset();
-                        varType = localSymbolTable.get(LeftName).getVariableType();
                         localSymbolTable.get(LeftName).setInitialized(true);
                         localInstructions.add(new Instruction(Operation.loca, localOff));
                     }else if (paramTable.get(LeftName)!=null){
@@ -763,13 +793,11 @@ public final class Analyser {
                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                         }
                         int paramOff = paramTable.get(LeftName).getStackOffset();
-                        varType = localSymbolTable.get(LeftName).getVariableType();
                         localInstructions.add(new Instruction(Operation.arga,paramOff));
                     }else if (globalSymbolTable.get(LeftName)!=null){
                         if (globalSymbolTable.get(LeftName).isConstant){
                             throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                         }
-                        varType = globalSymbolTable.get(LeftName).getVariableType();
                         int globalOff = globalSymbolTable.get(LeftName).getStackOffset();
                         globalSymbolTable.get(LeftName).setInitialized(true);
                         localInstructions.add(new Instruction(Operation.globa,globalOff));
@@ -782,7 +810,6 @@ public final class Analyser {
                     if (globalSymbolTable.get(LeftName)==null){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
-                    varType = globalSymbolTable.get(LeftName).getVariableType();
                     globalSymbolTable.get(LeftName).setInitialized(true);
                     globalOff = globalSymbolTable.get(LeftName).getStackOffset();
                     globalInstructions.add(new Instruction(Operation.globa,globalOff));
@@ -793,11 +820,8 @@ public final class Analyser {
 //                 赋值表达式的语义是将右侧表达式的计算结果赋给左侧表示的值。
                 //这里是赋值语句的右值
                 //赋值的右值还可能是函数，TODO:但是函数一定要有返回值！！！这里标准库函数没法验证
-                int varType2 = analyseAddMinusExpr();
+                analyseAddMinusExpr();
                 /* 对于赋值语句来说这里需要存值！ */
-                if (varType2!=varType){
-                    throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-                }
                 if (isInFunc) {
                     localInstructions.add(new Instruction(Operation.store_64));
                 } else {
@@ -812,11 +836,9 @@ public final class Analyser {
                 var funcSymbol = funcTable.get(LeftName);
                 if (funcSymbol == null){
                     /* 在isStandardFunc函数里面能够处理标准库函数，已经POP了 */
-                    int isStd;
-                    isStd= isStandardFunc(LeftName,true);
-                    varType = isStd;
+                    boolean isStd= isStandardFunc(LeftName,true);
                     expect(TokenType.R_PAREN);
-                    if (isStd<0){
+                    if (!isStd){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
                 }else {
@@ -837,6 +859,7 @@ public final class Analyser {
                         //TODO:进行语义分析，而且参数的类型应该匹配！但是这里只有Int，暂时不考虑
                         int paramNumRight = funcSymbol.getParam_num();
                         int tempParamNum = 0;
+
                         analyseAddMinusExpr();
                         tempParamNum++;
                         while (nextIf(TokenType.COMMA)!=null){
@@ -862,34 +885,34 @@ public final class Analyser {
                     //这里是一个判断语句；
                     //实现一个判断的空语句
                     var CompareSymbol =next();
-                    int varType2 = analyseAddMinusExpr();
-                    if (varType2 == 1) {
-                        if (isInFunc) {
-                            localInstructions.add(new Instruction(Operation.cmp_i));
-                        } else {
-                            throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-                        }
-                    }else if (varType2 == 2){
-                        if (isInFunc) {
-                            localInstructions.add(new Instruction(Operation.cmp_f));
-                        } else {
-                            throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-                        }
+                    analyseAddMinusExpr();
+                    if (isInFunc){
+                        localInstructions.add(new Instruction(Operation.cmp_i));
+                    }else {
+                        throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
-                    //如果!=则没什么处理
-                    switch (CompareSymbol.getTokenType()) {
-                        case EQ -> localInstructions.add(new Instruction(Operation.not));
-                        case LT -> localInstructions.add(new Instruction(Operation.set_lt));
-                        case GT -> localInstructions.add(new Instruction(Operation.set_gt));
-                        case LE -> {
+                    switch (CompareSymbol.getTokenType()){
+                        case EQ:
+                            //如果!=则没什么处理
+                            localInstructions.add(new Instruction(Operation.not));
+                            break;
+                        case LT:
+                            localInstructions.add(new Instruction(Operation.set_lt));
+                            break;
+                        case GT:
+                            localInstructions.add(new Instruction(Operation.set_gt));
+                            break;
+                        case LE:
                             localInstructions.add(new Instruction(Operation.set_gt));
                             localInstructions.add(new Instruction(Operation.not));
-                        }
-                        case GE -> {
+                            break;
+                        case GE:
                             localInstructions.add(new Instruction(Operation.set_lt));
                             localInstructions.add(new Instruction(Operation.not));
-                        }
-                        default -> throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
+                            break;
+                        default:
+                            throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+
                     }
                     localInstructions.add(new Instruction(Operation.popn,1));
                 }else {
@@ -924,61 +947,51 @@ public final class Analyser {
     //TODO:只考虑了Int
     private void analyseEmptyExpr() throws CompileError {
         var OptToken = next();
-        //TODO:只考虑了合法的类型转换
-        switch (OptToken.getTokenType()) {
-            case PLUS -> {
+        switch (OptToken.getTokenType()){
+            case PLUS:
                 analyseAddMinusExpr();
                 localInstructions.add(new Instruction(Operation.add_i));
-            }
-            case MINUS -> {
+                break;
+            case MINUS:
                 analyseAddMinusExpr();
                 localInstructions.add(new Instruction(Operation.sub_i));
-            }
-            case MUL -> {
+                break;
+            case MUL:
                 analyseMultiDivExpr();
                 localInstructions.add(new Instruction(Operation.mul_i));
-            }
-            case DIV -> {
+                break;
+            case DIV:
                 analyseMultiDivExpr();
                 localInstructions.add(new Instruction(Operation.div_i));
-            }
-            case AS_KW -> {
+                break;
+            case AS_KW:
+                //TODO:只考虑了合法的类型转换
                 int type = analyseTy();
-                if (type == 1) {
+                if (type==1) {
                     localInstructions.add(new Instruction(Operation.ftoi));
-                } else if (type == 2) {
+                }else if (type == 2){
                     localInstructions.add(new Instruction(Operation.itof));
-                } else {
-                    throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
+                }else{
+                    throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-            }
-            default -> throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
+                break;
+            default:
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
         }
     }
 
     //判断语句
     private void analyseCompareExpr() throws CompileError{
-        int varType = analyseAddMinusExpr();
+        analyseAddMinusExpr();
         if (check(TokenType.NEQ)||check(TokenType.EQ)||check(TokenType.LT)||check(TokenType.GT)||check(TokenType.LE)||check(TokenType.GE)){
             //TODO:这里只考虑了Int
             var CompareSymbolToken =next();
 
-            int varType2 = analyseAddMinusExpr();
-            if (varType2!=varType){
+            analyseAddMinusExpr();
+            if (isInFunc){
+                localInstructions.add(new Instruction(Operation.cmp_i));
+            }else {
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-            }
-            if (varType == 1) {
-                if (isInFunc) {
-                    localInstructions.add(new Instruction(Operation.cmp_i));
-                } else {
-                    throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-                }
-            }else if (varType == 2){
-                if (isInFunc) {
-                    localInstructions.add(new Instruction(Operation.cmp_f));
-                } else {
-                    throw new AnalyzeError(ErrorCode.InvalidInput, peek().getStartPos());
-                }
             }
 
             switch (CompareSymbolToken.getTokenType()){
@@ -1009,8 +1022,7 @@ public final class Analyser {
     }
 
     private int analyseAddMinusExpr() throws CompileError{
-        int varType;
-        varType = analyseMultiDivExpr();
+        int varType = analyseMultiDivExpr();
         boolean isAdd;
         while (check(TokenType.PLUS)||check(TokenType.MINUS)){
             if (nextIf(TokenType.PLUS)!=null){
@@ -1020,37 +1032,18 @@ public final class Analyser {
             }else{
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }
-            int varType2 = analyseMultiDivExpr();
-            if (varType!=varType2){
-                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-            }
+            analyseMultiDivExpr();
             if (isInFunc){
-                if (varType == 1) {
-                    if (isAdd) {
-                        localInstructions.add(new Instruction(Operation.add_i));
-                    } else {
-                        localInstructions.add(new Instruction(Operation.sub_i));
-                    }
-                }else if (varType == 2){
-                    if (isAdd) {
-                        localInstructions.add(new Instruction(Operation.add_f));
-                    } else {
-                        localInstructions.add(new Instruction(Operation.sub_f));
-                    }
+                if (isAdd){
+                    localInstructions.add(new Instruction(Operation.add_i));
+                }else{
+                    localInstructions.add(new Instruction(Operation.sub_i));
                 }
             }else{
-                if(varType == 1) {
-                    if (isAdd) {
-                        globalInstructions.add(new Instruction(Operation.add_i));
-                    } else {
-                        globalInstructions.add(new Instruction(Operation.sub_i));
-                    }
-                }else if (varType == 2){
-                    if (isAdd) {
-                        globalInstructions.add(new Instruction(Operation.add_f));
-                    } else {
-                        globalInstructions.add(new Instruction(Operation.sub_f));
-                    }
+                if (isAdd){
+                    globalInstructions.add(new Instruction(Operation.add_i));
+                }else {
+                    globalInstructions.add(new Instruction(Operation.sub_i));
                 }
             }
         }
@@ -1058,8 +1051,7 @@ public final class Analyser {
     }
 
     private int analyseMultiDivExpr() throws  CompileError{
-        int varType;
-        varType = analyseTypeChangeExpr();
+        int varType = analyseTypeChangeExpr();
         boolean isMul = false;
         while (check(TokenType.MUL)||check(TokenType.DIV)){
             if (nextIf(TokenType.MUL)!=null){
@@ -1067,37 +1059,18 @@ public final class Analyser {
             }else if (nextIf(TokenType.DIV)!=null){
                 isMul = false;
             }
-            int varType2 = analyseTypeChangeExpr();
-            if (varType!=varType2){
-                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
-            }
+            analyseTypeChangeExpr();
             if (isInFunc){
-                if (varType==1) {
-                    if (isMul) {
-                        localInstructions.add(new Instruction(Operation.mul_i));
-                    } else {
-                        localInstructions.add(new Instruction(Operation.div_i));
-                    }
-                }else if (varType==2){
-                    if (isMul) {
-                        localInstructions.add(new Instruction(Operation.mul_f));
-                    } else {
-                        localInstructions.add(new Instruction(Operation.div_f));
-                    }
+                if (isMul){
+                    localInstructions.add(new Instruction(Operation.mul_i));
+                }else {
+                    localInstructions.add(new Instruction(Operation.div_i));
                 }
             }else{
-                if (varType == 1) {
-                    if (isMul) {
-                        globalInstructions.add(new Instruction(Operation.mul_i));
-                    } else {
-                        globalInstructions.add(new Instruction(Operation.div_i));
-                    }
-                }else if (varType == 2){
-                    if (isMul) {
-                        globalInstructions.add(new Instruction(Operation.mul_f));
-                    } else {
-                        globalInstructions.add(new Instruction(Operation.div_f));
-                    }
+                if (isMul){
+                    globalInstructions.add(new Instruction(Operation.mul_i));
+                }else {
+                    globalInstructions.add(new Instruction(Operation.div_i));
                 }
             }
         }
@@ -1111,14 +1084,12 @@ public final class Analyser {
             next();
             int type = analyseTy();
             if (type==1){
-                varType = 1;
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.ftoi));
                 }else{
                     globalInstructions.add(new Instruction(Operation.ftoi));
                 }
             }else if (type==2){
-                varType = 2;
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.itof));
                 }else {
@@ -1131,15 +1102,15 @@ public final class Analyser {
 
     private int analyseFactor() throws CompileError{
         boolean negate = false;
-        int varType = 0;
         //这里是一个取翻表达式；
+        int varType = 0;
         while (check(TokenType.MINUS)){
             next();
             negate = !negate;
         }
         if (check(TokenType.L_PAREN)){
             next();
-            varType = analyseAddMinusExpr();
+            analyseAddMinusExpr();
             expect(TokenType.R_PAREN);
         }else if (check(TokenType.UINT_LITERAL)||check(TokenType.DOUBLE_LITERAL)||check(TokenType.STRING_LITERAL)||check(TokenType.CHAR_LITERAL)){
             if (check(TokenType.UINT_LITERAL)){
@@ -1152,14 +1123,9 @@ public final class Analyser {
                     globalInstructions.add(new Instruction(Operation.push,intNum));
                 }
             }else if (check(TokenType.DOUBLE_LITERAL)){
+                //TODO:拓展部分，需要考虑double情况！
                 varType = 2;
-                var doubleToken = expect(TokenType.DOUBLE_LITERAL);
-                double doubleNum = (double) doubleToken.getValue();
-                if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.push,Double.doubleToRawLongBits(doubleNum)));
-                }else{
-                    globalInstructions.add(new Instruction(Operation.push,Double.doubleToRawLongBits(doubleNum)));
-                }
+                next();
             }else if (check(TokenType.STRING_LITERAL)){
                 //对字符串String的处理
                 //对于String类型，只会出现在putStr中，而且String要加入到全局变量表当中;
@@ -1181,14 +1147,15 @@ public final class Analyser {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
             }else if (check(TokenType.CHAR_LITERAL)){
+                varType = 1;
                 //对字符串char的处理
                 //对于char类型，只会出现在putChar中，而且Char要加入到全局变量表当中;
                 var charToken = expect(TokenType.CHAR_LITERAL);
-                varType = 1;
                 char charValue = (Character) charToken.getValue();
+                int tempChar = charValue;
                 //获取当前全局变量表的偏移量;
                 if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.push, (int) charValue));
+                    localInstructions.add(new Instruction(Operation.push,tempChar));
                 }else{
                     //putChar函数一定在某一个函数当中出现，不可能作为全局变量出现，所以应该报错;
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
@@ -1204,17 +1171,14 @@ public final class Analyser {
                 var funcSymbol = funcTable.get(name);
                 if (funcSymbol==null){
                     //这里要考虑库函数的情况
-                    int isStd;
-                    isStd = isStandardFunc(name,false);
-                    varType = isStd;
+                    boolean isStd = isStandardFunc(name,false);
                     expect(TokenType.R_PAREN);
-                    if (isStd<0){
+                    if (!isStd){
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
                 }else{
                     //这里就不是库函数了，而是自己定义的函数
                     int ret_num = funcSymbol.getRet_num();
-                    varType = funcSymbol.getRetType();
                     if (isInFunc){
                         localInstructions.add(new Instruction(Operation.stackalloc,ret_num));
                     }else {
@@ -1260,17 +1224,14 @@ public final class Analyser {
                             throw new AnalyzeError(ErrorCode.NotInitialized,peek().getStartPos());
                         }
                         var localOff = localSymbol.getStackOffset();
-                        varType = localSymbol.getVariableType();
                         localInstructions.add(new Instruction(Operation.loca,localOff));
                         localInstructions.add(new Instruction(Operation.load_64));
                     }else if (paramSymbol!=null){
                         var paramOff = paramSymbol.getStackOffset();
-                        varType = paramSymbol.getVariableType();
                         localInstructions.add(new Instruction(Operation.arga,paramOff));
                         localInstructions.add(new Instruction(Operation.load_64));
                     }else if(globalSymbol!=null){
                         var globalOff = globalSymbol.getStackOffset();
-                        varType = globalSymbol.getVariableType();
                         localInstructions.add(new Instruction(Operation.globa,globalOff));
                         localInstructions.add(new Instruction(Operation.load_64));
                     }else {
@@ -1285,7 +1246,6 @@ public final class Analyser {
                             throw new AnalyzeError(ErrorCode.NotInitialized,peek().getStartPos());
                         }
                         var globalOff = globalSymbol.getStackOffset();
-                        varType = globalSymbol.getVariableType();
                         globalInstructions.add(new Instruction(Operation.loca,globalOff));
                         globalInstructions.add(new Instruction(Operation.load_64));
                     }else {
@@ -1298,31 +1258,31 @@ public final class Analyser {
         }
         if (negate){
             //TODO：这里只考虑了Int的情况
-            if (varType == 1){
-                if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.neg_i));
-                }else {
-                    globalInstructions.add(new Instruction(Operation.neg_i));
-                }
-            }else if (varType == 2){
-                if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.neg_f));
-                }else {
-                    globalInstructions.add(new Instruction(Operation.neg_f));
-                }
+            if (isInFunc){
+                localInstructions.add(new Instruction(Operation.neg_i));
+            }else {
+                globalInstructions.add(new Instruction(Operation.neg_i));
             }
         }
         return varType;
     }
     private boolean checkNextIfExpr() throws CompileError{
         var nextToken = peek();
-        return switch (nextToken.getTokenType()) {
-            case MINUS, IDENT, UINT_LITERAL, DOUBLE_LITERAL, STRING_LITERAL, CHAR_LITERAL, L_PAREN -> true;
-            default -> false;
-        };
+        switch (nextToken.getTokenType()){
+            case MINUS:
+            case IDENT:
+            case UINT_LITERAL:
+            case DOUBLE_LITERAL:
+            case STRING_LITERAL:
+            case CHAR_LITERAL:
+            case L_PAREN:
+                return true;
+            default:
+                return false;
+        }
     }
     //处理标准库函数
-    private int isStandardFunc(String name,boolean EmptyNoRet) throws CompileError{
+    private boolean isStandardFunc(String name,boolean EmptyNoRet) throws CompileError{
         switch (name){
             case "getint":
                 if (isInFunc){
@@ -1336,7 +1296,7 @@ public final class Analyser {
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
                 }
-                return 1;
+                return true;
             case "getchar":
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.scan_c));
@@ -1349,7 +1309,7 @@ public final class Analyser {
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
                 }
-                return 1;
+                return true;
             case "getdouble":
                 if (isInFunc){
                     localInstructions.add(new Instruction(Operation.scan_f));
@@ -1362,7 +1322,7 @@ public final class Analyser {
                         throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                     }
                 }
-                return 2;
+                return true;
             case "putdouble":
                 if (isInFunc){
                     analyseAddMinusExpr();
@@ -1370,7 +1330,7 @@ public final class Analyser {
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-                return 0;
+                return  true;
             case "putint":
                 if (isInFunc){
                     analyseAddMinusExpr();
@@ -1378,7 +1338,7 @@ public final class Analyser {
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-                return 0;
+                return  true;
             case "putchar":
                 if (isInFunc){
                     analyseAddMinusExpr();
@@ -1386,7 +1346,7 @@ public final class Analyser {
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-                return 0;
+                return  true;
             case "putstr":
                 if (isInFunc){
                     analyseAddMinusExpr();
@@ -1394,17 +1354,16 @@ public final class Analyser {
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-                return 0;
+                return  true;
             case "putln":
                 if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.println));
+                    localInstructions.add(new Instruction(Operation.add_i.println));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
-
-                return 0;
+                return true;
             default:
-                return -1;
+                return false;
         }
     }
 }
