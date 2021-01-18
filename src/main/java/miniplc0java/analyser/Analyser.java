@@ -1458,6 +1458,7 @@ public final class Analyser {
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
+
                 return 0;
             default:
                 return -100;
