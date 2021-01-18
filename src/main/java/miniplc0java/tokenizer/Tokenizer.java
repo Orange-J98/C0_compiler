@@ -3,7 +3,7 @@ import miniplc0java.error.*;
 import  miniplc0java.util.Pos;
 
 public class Tokenizer {
-    private final StringIter it;
+    private StringIter it;
     public Tokenizer(StringIter it){ this.it = it;}
 
     /**
@@ -34,71 +34,71 @@ public class Tokenizer {
         }
     }
     //无符号整数或浮点数
-    private Token UIntOrDouble() {
-        StringBuilder token = new StringBuilder();
+    private Token UIntOrDouble() throws TokenizeError{
+        String token = "";
         Pos startpos1 = it.currentPos();
         while (Character.isDigit(it.peekChar())) {
-            token.append(it.nextChar());
+            token += it.nextChar();
         }
         boolean flag = false;
         if(it.peekChar()=='.'){
             flag =true;
-            token.append(it.nextChar());
+            token += it.nextChar();
             while (Character.isDigit(it.peekChar())) {
-                token.append(it.nextChar());
+                token += it.nextChar();
             }
             if(it.peekChar()=='e'||it.peekChar()=='E'){
-                token.append(it.nextChar());
+                token+=it.nextChar();
                 if(it.peekChar()=='+'||it.peekChar()=='-'){
-                    token.append(it.nextChar());
+                    token+=it.nextChar();
                 }
                 while (Character.isDigit(it.peekChar())) {
-                    token.append(it.nextChar());
+                    token += it.nextChar();
                 }
             }
         }
 
         Pos endpos1 = it.currentPos();
-        token = new StringBuilder(removeZero(token.toString()));
-        if (token.toString().equals("")) {
-            token = new StringBuilder("0");
+        token = removeZero(token);
+        if (token.equals("")) {
+            token = "0";
         }
 
         if(flag){
-            double num = Double.parseDouble(token.toString());
+            double num = Double.parseDouble(token);
             return new Token(TokenType.DOUBLE_LITERAL,num,startpos1,endpos1);
         }else {
-            long num = Long.parseLong(token.toString());
+            int num = Integer.parseInt(token);
             return new Token(TokenType.UINT_LITERAL,num, startpos1, endpos1);
         }
     }
 
     //识别关键字和标识符
-    private Token IdentOrKeyword() {
-        StringBuilder token = new StringBuilder();
-        Pos startPos = it.currentPos();
+    private Token IdentOrKeyword() throws TokenizeError{
+        String token = "";
+        Pos startpos = it.currentPos();
         while(Character.isAlphabetic(it.peekChar())||Character.isDigit(it.peekChar())||it.peekChar()=='_'){
-            token.append(it.nextChar());
+            token += it.nextChar();
         }
-        Pos endPos = it.currentPos();
-        return switch (token.toString()) {
-            case "fn" -> new Token(TokenType.FN_KW, token.toString(), startPos, endPos);
-            case "let" -> new Token(TokenType.LET_KW, token.toString(), startPos, endPos);
-            case "const" -> new Token(TokenType.CONST_KW, token.toString(), startPos, endPos);
-            case "as" -> new Token(TokenType.AS_KW, token.toString(), startPos, endPos);
-            case "while" -> new Token(TokenType.WHILE_KW, token.toString(), startPos, endPos);
-            case "if" -> new Token(TokenType.IF_KW, token.toString(), startPos, endPos);
-            case "else" -> new Token(TokenType.ELSE_KW, token.toString(), startPos, endPos);
-            case "return" -> new Token(TokenType.RETURN_KW, token.toString(), startPos, endPos);
-            case "break" -> new Token(TokenType.BREAK_KW, token.toString(), startPos, endPos);
-            case "continue" -> new Token(TokenType.CONTINUE_KW, token.toString(), startPos, endPos);
-            default -> new Token(TokenType.IDENT, token.toString(), startPos, endPos);
+        Pos endpos = it.currentPos();
+        return switch (token) {
+            case "fn" -> new Token(TokenType.FN_KW, token, startpos, endpos);
+            case "let" -> new Token(TokenType.LET_KW, token, startpos, endpos);
+            case "const" -> new Token(TokenType.CONST_KW, token, startpos, endpos);
+            case "as" -> new Token(TokenType.AS_KW, token, startpos, endpos);
+            case "while" -> new Token(TokenType.WHILE_KW, token, startpos, endpos);
+            case "if" -> new Token(TokenType.IF_KW, token, startpos, endpos);
+            case "else" -> new Token(TokenType.ELSE_KW, token, startpos, endpos);
+            case "return" -> new Token(TokenType.RETURN_KW, token, startpos, endpos);
+            case "break" -> new Token(TokenType.BREAK_KW, token, startpos, endpos);
+            case "continue" -> new Token(TokenType.CONTINUE_KW, token, startpos, endpos);
+            default -> new Token(TokenType.IDENT, token, startpos, endpos);
         };
     }
 
     private Token StringOrChar() throws TokenizeError{
         String token = "";
-        Pos startPos1 =it.currentPos();
+        Pos startpos1 =it.currentPos();
         //字符串String
         if (it.peekChar() == '\"'){
             it.nextChar();
@@ -111,7 +111,7 @@ public class Tokenizer {
             if (it.peekChar()=='\"'){
                 it.nextChar();
                 Pos endpos1 = it.currentPos();
-                return new Token(TokenType.STRING_LITERAL,token,startPos1,endpos1);
+                return new Token(TokenType.STRING_LITERAL,token,startpos1,endpos1);
             }else{
                 throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
             }
@@ -125,7 +125,7 @@ public class Tokenizer {
             if (it.peekChar()=='\''){
                 it.nextChar();
                 Pos endpos1 = it.currentPos();
-                return new Token(TokenType.CHAR_LITERAL,charToken,startPos1,endpos1);
+                return new Token(TokenType.CHAR_LITERAL,charToken,startpos1,endpos1);
             }else{
                 throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
             }
@@ -193,9 +193,7 @@ public class Tokenizer {
             case '/':
                 if (it.peekChar()=='/'){
                     it.nextChar();
-                    while (it.peekChar()!='\n'){
-                        it.nextChar();
-                    }
+                    while (it.nextChar()!='\n');
                     return nextToken();
                 }
                 return new Token(TokenType.DIV, '/', it.previousPos(), it.currentPos());

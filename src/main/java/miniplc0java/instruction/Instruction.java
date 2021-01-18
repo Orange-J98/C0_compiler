@@ -6,7 +6,7 @@ import java.util.Objects;
 public class Instruction {
     private Operation opt;
     private int OptNum;
-    long x;
+    Integer x;
 
     public Instruction(Operation opt) throws CompileError {
         this.opt = opt;
@@ -22,7 +22,7 @@ public class Instruction {
         OptNum = optNum;
     }
 
-    public Instruction(Operation opt, long x) throws CompileError {
+    public Instruction(Operation opt, Integer x) throws CompileError {
         this.opt = opt;
         this.OptNum = opt.getNum();
         this.x = x;
@@ -59,7 +59,7 @@ public class Instruction {
         this.opt = opt;
     }
 
-    public long getX() {
+    public Integer getX() {
         return x;
     }
 
@@ -68,6 +68,9 @@ public class Instruction {
     }
 
 
+    public String toNum() throws CompileError {
+        return Integer.toString(this.opt.getNum())+Integer.toString(this.x);
+    }
     @Override
     public String toString() {
         switch (this.opt) {
