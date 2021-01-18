@@ -68,7 +68,7 @@ public class Tokenizer {
             double num = Double.parseDouble(token.toString());
             return new Token(TokenType.DOUBLE_LITERAL,num,startpos1,endpos1);
         }else {
-            int num = Integer.parseInt(token.toString());
+            long num = Long.parseLong(token.toString());
             return new Token(TokenType.UINT_LITERAL,num, startpos1, endpos1);
         }
     }
