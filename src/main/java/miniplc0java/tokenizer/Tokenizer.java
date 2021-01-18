@@ -65,8 +65,7 @@ public class Tokenizer {
         }
 
         if(flag){
-            double num = Double.parseDouble(token);
-            return new Token(TokenType.DOUBLE_LITERAL,num,startpos1,endpos1);
+            throw new TokenizeError(ErrorCode.InvalidInput, it.currentPos());
         }else {
             int num = Integer.parseInt(token);
             return new Token(TokenType.UINT_LITERAL,num, startpos1, endpos1);
