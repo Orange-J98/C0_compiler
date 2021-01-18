@@ -648,7 +648,7 @@ public final class Analyser {
             //arga 0 默认为返回值的Offset;
             localInstructions.add(new Instruction(Operation.arga,0));
             int varType = analyseAddMinusExpr();
-            if (ret_num!=varType){
+            if (varType!=shouldRetType){
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }
             localInstructions.add(new Instruction(Operation.store_64));
