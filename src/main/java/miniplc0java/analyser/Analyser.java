@@ -1454,7 +1454,7 @@ public final class Analyser {
                 return 0;
             case "putln":
                 if (isInFunc){
-                    localInstructions.add(new Instruction(Operation.add_i.println));
+                    localInstructions.add(new Instruction(Operation.println));
                 }else {
                     throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
                 }
