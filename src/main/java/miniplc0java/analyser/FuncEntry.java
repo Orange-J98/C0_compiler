@@ -7,18 +7,20 @@ import miniplc0java.instruction.Instruction;
 
 public class FuncEntry {
     /** func_name即为函数在全局变量表中的偏移量 */
-    int func_name;
-    int ret_num;
-    int param_num;
-    int locVarNum;
-    int bodyCnt;
-    int funcOffset;
+    private int func_name;
+    private int haveRet;
+    private int returnType;
+    private int param_num;
+    private int locVarNum;
+    private int bodyCnt;
+    private int funcOffset;
     HashMap<String,SymbolEntry> paramSymbolEntry;
     ArrayList<Instruction> instructions;
 
-    public FuncEntry(int func_name, int ret_num, int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions, int funcOffset, HashMap<String,SymbolEntry> paramSymbolEntry) {
+    public FuncEntry(int func_name, int haveRet, int returnType, int param_num, int locVarNum, int bodyCnt, ArrayList<Instruction> instructions, int funcOffset, HashMap<String,SymbolEntry> paramSymbolEntry) {
         this.func_name = func_name;
-        this.ret_num = ret_num;
+        this.haveRet = haveRet;
+        this.returnType = returnType;
         this.param_num = param_num;
         this.locVarNum = locVarNum;
         this.bodyCnt = bodyCnt;
@@ -50,12 +52,20 @@ public class FuncEntry {
         this.func_name = func_name;
     }
 
-    public int getRet_num() {
-        return ret_num;
+    public int getHaveRet() {
+        return haveRet;
     }
 
-    public void setRet_num(int ret_num) {
-        this.ret_num = ret_num;
+    public void setHaveRet(int haveRet) {
+        this.haveRet = haveRet;
+    }
+
+    public int getReturnType() {
+        return returnType;
+    }
+
+    public void setReturnType(int returnType) {
+        this.returnType = returnType;
     }
 
     public int getParam_num() {
