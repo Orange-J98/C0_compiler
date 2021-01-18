@@ -707,6 +707,7 @@ public final class Analyser {
                 localInstructions.add(new Instruction(Operation.store_64));
             }else{
                 int globalOff = globalSymbolTable.get(name).getStackOffset();
+
                 globalInstructions.add(new Instruction(Operation.globa,globalOff));
                 analyseAddMinusExpr();
                 globalInstructions.add(new Instruction(Operation.store_64));
@@ -1108,7 +1109,8 @@ public final class Analyser {
                     globalInstructions.add(new Instruction(Operation.push,intNum));
                 }
             }else if (check(TokenType.DOUBLE_LITERAL)){
-                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+                //TODO:拓展部分，需要考虑double情况！
+                next();
             }else if (check(TokenType.STRING_LITERAL)){
                 //对字符串String的处理
                 //对于String类型，只会出现在putStr中，而且String要加入到全局变量表当中;
