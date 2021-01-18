@@ -138,12 +138,12 @@ public class App {
             for (String tempFuncName:funcName){
                 FuncEntry funcEntry = funcTable.get(tempFuncName);
                 toBinary_32(Binary,funcEntry.getFunc_name());
-                toBinary_32(Binary,funcEntry.getHaveRet());
+                toBinary_32(Binary,funcEntry.getRet_num());
                 toBinary_32(Binary,funcEntry.getParam_num());
                 toBinary_32(Binary,funcEntry.getLocVarNum());
                 toBinary_32(Binary,funcEntry.getBodyCnt());
                 for (Instruction instruction:funcEntry.getInstructions()){
-                    if (instruction.getX()==-1) {
+                    if (instruction.getX()==-1||instruction.getX()==null) {
                         toBinary_8(Binary,instruction.getOptNum());
                     }else {
                         toBinary_8(Binary,instruction.getOptNum());
@@ -177,16 +177,16 @@ public class App {
             Binary.add((byte) (num& 0xff));
     }
 
-    private  static void toBinary_32 (ArrayList<Byte>Binary,long num)
+    private  static void toBinary_32 (ArrayList<Byte>Binary,int num)
     {
         for (int i=3;i>=0;i--) {
             Binary.add((byte) (num >> (8 * i) & 0xff));
         }
     }
 
-    private  static void toBinary_64 (ArrayList<Byte>Binary,long num)
+    private  static void toBinary_64 (ArrayList<Byte>Binary,int num)
     {
-        long newNum = num;
+        long newNum = (long)num;
         for (int i=7;i>=0;i--) {
             Binary.add((byte) (newNum >> (8 * i) & 0xff));
         }

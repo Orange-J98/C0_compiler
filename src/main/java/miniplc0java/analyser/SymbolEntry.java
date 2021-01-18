@@ -9,9 +9,13 @@ public class SymbolEntry {
     int global_count;
 
     String global_value;
-    //变量类型 0为void（变量应该不会有0，但是Func可能为0）,1为int,2为double，还好当时考虑的周全哈哈
+    //变量类型 0为void（变量应该不会有0，但是Func可能为0）,1为int,2为double
     int variableType;
-
+    /**
+     * @param isConstant
+     * @param isDeclared
+     * @param stackOffset
+     */
     public SymbolEntry(boolean isConstant, boolean isDeclared, int stackOffset,int type) {
         this.isConstant = isConstant;
         this.isInitialized = isDeclared;
