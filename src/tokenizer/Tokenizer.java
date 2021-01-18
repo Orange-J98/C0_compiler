@@ -30,7 +30,7 @@ public class Tokenizer {
         }else if(peek=='"'||peek=='\''){
             return StringOrChar();
         }else{
-            return OperatorOrUnknow();
+            return OperatorOrUnknown();
         }
     }
     //无符号整数或浮点数
@@ -81,30 +81,19 @@ public class Tokenizer {
             token += it.nextChar();
         }
         Pos endpos = it.currentPos();
-        switch (token){
-            case "fn":
-                return new Token(TokenType.FN_KW, token, startpos, endpos);
-            case "let":
-                return new Token(TokenType.LET_KW, token, startpos, endpos);
-            case "const":
-                return new Token(TokenType.CONST_KW, token, startpos, endpos);
-            case "as":
-                return new Token(TokenType.AS_KW, token, startpos, endpos);
-            case "while":
-                return new Token(TokenType.WHILE_KW, token, startpos, endpos);
-            case "if":
-                return new Token(TokenType.IF_KW, token, startpos, endpos);
-            case "else":
-                return new Token(TokenType.ELSE_KW, token, startpos, endpos);
-            case "return":
-                return new Token(TokenType.RETURN_KW, token, startpos, endpos);
-            case "break":
-                return new Token(TokenType.BREAK_KW, token, startpos, endpos);
-            case "continue":
-                return new Token(TokenType.CONTINUE_KW, token, startpos, endpos);
-            default:
-                return new Token(TokenType.IDENT,token,startpos,endpos);
-        }
+        return switch (token) {
+            case "fn" -> new Token(TokenType.FN_KW, token, startpos, endpos);
+            case "let" -> new Token(TokenType.LET_KW, token, startpos, endpos);
+            case "const" -> new Token(TokenType.CONST_KW, token, startpos, endpos);
+            case "as" -> new Token(TokenType.AS_KW, token, startpos, endpos);
+            case "while" -> new Token(TokenType.WHILE_KW, token, startpos, endpos);
+            case "if" -> new Token(TokenType.IF_KW, token, startpos, endpos);
+            case "else" -> new Token(TokenType.ELSE_KW, token, startpos, endpos);
+            case "return" -> new Token(TokenType.RETURN_KW, token, startpos, endpos);
+            case "break" -> new Token(TokenType.BREAK_KW, token, startpos, endpos);
+            case "continue" -> new Token(TokenType.CONTINUE_KW, token, startpos, endpos);
+            default -> new Token(TokenType.IDENT, token, startpos, endpos);
+        };
     }
 
     private Token StringOrChar() throws TokenizeError{
@@ -148,33 +137,38 @@ public class Tokenizer {
     private String getEscapeSequence(String token) throws TokenizeError {
         if(it.peekChar()=='\\'){
             it.nextChar();
-            switch (it.peekChar()){
-                case '\\':
-                    token+='\\';
+            switch (it.peekChar()) {
+                case '\\' -> {
+                    token += '\\';
                     it.nextChar();
                     return token;
-                case '"':
-                    token+='\"';
+                }
+                case '"' -> {
+                    token += '\"';
                     it.nextChar();
                     return token;
-                case '\'':
-                    token+='\'';
+                }
+                case '\'' -> {
+                    token += '\'';
                     it.nextChar();
                     return token;
-                case 'n':
-                    token+='\n';
+                }
+                case 'n' -> {
+                    token += '\n';
                     it.nextChar();
                     return token;
-                case 't':
-                    token+='\t';
+                }
+                case 't' -> {
+                    token += '\t';
                     it.nextChar();
                     return token;
-                case 'r':
-                    token+='\r';
+                }
+                case 'r' -> {
+                    token += '\r';
                     it.nextChar();
                     return token;
-                default:
-                    throw new TokenizeError(ErrorCode.InvalidInput,it.previousPos());
+                }
+                default -> throw new TokenizeError(ErrorCode.InvalidInput, it.previousPos());
             }
         }
         token += it.nextChar();
@@ -183,7 +177,7 @@ public class Tokenizer {
 
 
     //识别常量
-    private Token OperatorOrUnknow() throws TokenizeError{
+    private Token OperatorOrUnknown() throws TokenizeError{
         switch (it.nextChar()){
             case '+':
                 return new Token(TokenType.PLUS, '+', it.previousPos(), it.currentPos());

@@ -1,4 +1,6 @@
 package instruction;
+import error.CompileError;
+
 import java.util.Objects;
 
 public class Instruction {
@@ -6,7 +8,7 @@ public class Instruction {
     private int OptNum;
     Integer x;
 
-    public Instruction(Operation opt) {
+    public Instruction(Operation opt) throws CompileError {
         this.opt = opt;
         this.OptNum = opt.getNum();
         this.x = -1;
@@ -20,7 +22,7 @@ public class Instruction {
         OptNum = optNum;
     }
 
-    public Instruction(Operation opt, Integer x) {
+    public Instruction(Operation opt, Integer x) throws CompileError {
         this.opt = opt;
         this.OptNum = opt.getNum();
         this.x = x;
@@ -28,7 +30,7 @@ public class Instruction {
 
 
 
-    public Instruction() {
+    public Instruction() throws CompileError {
         this.opt = Operation.load_64;
         this.OptNum = this.opt.getNum();
         this.x = -1;
@@ -66,7 +68,7 @@ public class Instruction {
     }
 
 
-    public String toNum(){
+    public String toNum() throws CompileError {
         return Integer.toString(this.opt.getNum())+Integer.toString(this.x);
     }
     @Override

@@ -91,14 +91,14 @@ public class App {
             toBinary_32(Binary,funcEntry.getLocVarNum());
             toBinary_32(Binary,funcEntry.getBodyCnt());
             for (Instruction instruction:funcEntry.getInstructions()){
-                if (instruction.getX()==-1||instruction.getX()==null) {
+                if (instruction.getX()==-1) {
                     toBinary_8(Binary,instruction.getOptNum());
                 }else {
                     toBinary_8(Binary,instruction.getOptNum());
                     if (instruction.getOptNum()== 0x01){
                         toBinary_64(Binary,instruction.getX());
                     }else{
-                        toBinary_32(Binary,instruction.getX());
+                        toBinary_32(Binary, Long.valueOf(instruction.getX()).intValue());
                     }
                 }
             }
@@ -152,9 +152,9 @@ public class App {
         }
     }
 
-    private  static void toBinary_64 (ArrayList<Byte>Binary,int num)
+    private  static void toBinary_64 (ArrayList<Byte>Binary,long num)
     {
-        long newNum = (long)num;
+        long newNum = num;
         for (int i=7;i>=0;i--) {
             Binary.add((byte) (newNum >> (8 * i) & 0xff));
         }
