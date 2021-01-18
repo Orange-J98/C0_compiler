@@ -378,7 +378,7 @@ public final class Analyser {
             }else if(name.equals("int")){
                 return 1;
             }else if (name.equals("double")){
-                return 2;
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }else{
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }
@@ -1109,8 +1109,7 @@ public final class Analyser {
                     globalInstructions.add(new Instruction(Operation.push,intNum));
                 }
             }else if (check(TokenType.DOUBLE_LITERAL)){
-                //TODO:拓展部分，需要考虑double情况！
-                next();
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }else if (check(TokenType.STRING_LITERAL)){
                 //对字符串String的处理
                 //对于String类型，只会出现在putStr中，而且String要加入到全局变量表当中;
