@@ -7,13 +7,11 @@ public class Instruction {
     private Operation opt;
     private int OptNum;
     Integer x;
-    long y;
 
     public Instruction(Operation opt) throws CompileError {
         this.opt = opt;
         this.OptNum = opt.getNum();
         this.x = -1;
-        this.y = -1;
     }
 
     public int getOptNum() {
@@ -28,14 +26,10 @@ public class Instruction {
         this.opt = opt;
         this.OptNum = opt.getNum();
         this.x = x;
-        this.y = -1;
     }
-    public Instruction(Operation opt, long y) throws CompileError {
-        this.opt = opt;
-        this.OptNum = opt.getNum();
-        this.y = y;
-        this.x = -1;
-    }
+
+
+
     public Instruction() throws CompileError {
         this.opt = Operation.load_64;
         this.OptNum = this.opt.getNum();
@@ -73,13 +67,6 @@ public class Instruction {
         this.x = x;
     }
 
-    public long getY() {
-        return y;
-    }
-
-    public void setY(long y) {
-        this.y = y;
-    }
 
     public String toNum() throws CompileError {
         return Integer.toString(this.opt.getNum())+Integer.toString(this.x);
@@ -147,11 +134,7 @@ public class Instruction {
             case br_true:
             case call:
             case callname:
-                if (this.x<0){
-                    return String.format("%s %s", this.opt.toString().toUpperCase(), this.y);
-                }else {
-                    return String.format("%s %s", this.opt.toString().toUpperCase(), this.x);
-                }
+                return String.format("%s %s", this.opt.toString().toUpperCase(), this.x);
             default:
                 return "panic";
         }
