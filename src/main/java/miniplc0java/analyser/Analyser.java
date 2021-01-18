@@ -300,18 +300,16 @@ public final class Analyser {
                 funcName.add(func_name);
             }
 
-            boolean [] bool = analyseBlockStmt(false);
+            boolean [] bool = analyseBlockStmt(false,0,null);
             //将函数加入到函数表里面嗷
             //参数表的使命应该已经完成了，要加入到函数表里面
-            //TODO:return
             Boolean isReturn = bool[0];
-
-
             if (ret_num>0&&!isReturn) {
                 throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }else {
                 localInstructions.add(new Instruction(Operation.ret));
             }
+
             if (ret_num>0){
                 funcTable.get(func_name).setInstructions(localInstructions);
                 funcTable.get(func_name).setLocVarNum(localSymbolTable.size());
@@ -400,12 +398,12 @@ public final class Analyser {
 //    | return_stmt
 //    | block_stmt
 //    | empty_stmt
-    private boolean [] analyseBlockStmt(boolean isInWhile) throws CompileError{
+    private boolean [] analyseBlockStmt(boolean isInWhile,int whileStart, ArrayList<Integer>breakOffset) throws CompileError{
 
         expect(TokenType.L_BRACE);
         boolean[] oldBool = {false,false,false};
         while(checkNextIfStmt()){
-            boolean[] newBool = analyseStmt(isInWhile);
+            boolean[] newBool = analyseStmt(isInWhile,whileStart,breakOffset);
             for (int i = 0; i<3; i++) {
                 oldBool[i] = newBool[i] || oldBool[i];
             }
@@ -413,7 +411,7 @@ public final class Analyser {
         expect(TokenType.R_BRACE);
         return oldBool;
     }
-    private boolean[] analyseStmt(boolean isInWhile) throws CompileError{
+    private boolean[] analyseStmt(boolean isInWhile, int whileStart, ArrayList<Integer>breakOffset) throws CompileError{
         boolean [] bool = {false,false,false};
         if(checkNextIfExpr()){
             //    expr_stmt -> expr ';'
@@ -427,29 +425,43 @@ public final class Analyser {
             analyseDeclStmt();
         }else if (check(TokenType.IF_KW)){
             //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
-            bool = analyseIfStmt(isInWhile);
+            bool = analyseIfStmt(isInWhile,whileStart,breakOffset);
         }else if(check(TokenType.WHILE_KW)){
             //    while_stmt -> 'while' expr block_stmt
             isInWhile = true;
             analyseWhile();
         }else if(check(TokenType.BREAK_KW)){
             //    break_stmt -> 'break' ';'
-            bool[1] = true;
+            bool[2] = true;
+            if (!isInWhile){
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+            }
             analyseBreakStmt();
             if (isInFunc){
+                breakOffset.add(localInstructions.size());
                 localInstructions.add(new Instruction(Operation.br,0));
+            }else {
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
             }
         }else if(check(TokenType.CONTINUE_KW)){
             //    continue_stmt -> 'continue' ';'
-            bool[2] = true;
+            if (!isInWhile){
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+            }
+            bool[1] = true;
             analyseContinueStmt();
+            if (isInFunc){
+                localInstructions.add(new Instruction(Operation.br,whileStart-localInstructions.size()));
+            }else {
+                throw new AnalyzeError(ErrorCode.InvalidInput,peek().getStartPos());
+            }
         }else if (check(TokenType.RETURN_KW)){
             //    return_stmt -> 'return' expr? ';'
             bool[0] = true;
             analyseReturnStmt();
         }else if (check(TokenType.L_BRACE)){
             //    block_stmt -> '{' stmt* '}'
-            bool = analyseBlockStmt(isInWhile);
+            bool = analyseBlockStmt(isInWhile,whileStart,breakOffset);
         }else if(check(TokenType.SEMICOLON)){
             //    empty_stmt -> ';'
             next();
@@ -461,7 +473,7 @@ public final class Analyser {
 
     //    if_stmt -> 'if' expr block_stmt ('else' 'if' expr block_stmt)* ('else' block_stmt)?
     boolean isInIf = false;
-    private boolean [] analyseIfStmt(boolean isInWhile) throws CompileError{
+    private boolean [] analyseIfStmt(boolean isInWhile, int whileStart, ArrayList<Integer>breakOffset) throws CompileError{
         boolean isReturn = false;
         boolean isContinue = false;
         boolean isBreak = false;
@@ -477,7 +489,7 @@ public final class Analyser {
         localInstructions.add(new Instruction(Operation.br,0));
         int index = startIf;
 
-        boolean [] bool = analyseBlockStmt(isInWhile);
+        boolean [] bool = analyseBlockStmt(isInWhile,whileStart,breakOffset);
         isReturn = bool[0];
         isContinue = bool[1];
         isBreak = bool[2];
@@ -510,7 +522,7 @@ public final class Analyser {
                 //这里需要填入当判断为false时的跳转，需要跳转到结构体结尾的下一个操作符
                 localInstructions.add(new Instruction(Operation.br,0));
 
-                bool = analyseBlockStmt(isInWhile);
+                bool = analyseBlockStmt(isInWhile,whileStart,breakOffset);
                 isReturn &= bool[0];
                 isContinue &=bool [1];
                 isBreak &= bool[2];
@@ -527,7 +539,7 @@ public final class Analyser {
             }else{
                 isInIf = true;
                 elseNum++;
-                bool = analyseBlockStmt(isInWhile);
+                bool = analyseBlockStmt(isInWhile,whileStart,breakOffset);
                 isReturn &= bool[0];
                 isContinue &=bool [1];
                 isBreak &= bool[2];
@@ -537,7 +549,7 @@ public final class Analyser {
             }
         }
         if (!isElse){
-            isElse = false;
+            isReturn = false;
             isBreak = false;
             isContinue = false;
         }
@@ -557,6 +569,7 @@ public final class Analyser {
     //    while_stmt -> 'while' expr block_stmt
 
     private void analyseWhile() throws CompileError{
+        //分析比较式
         expect(TokenType.WHILE_KW);
         int whileStartOff=localInstructions.size();
         if (isInFunc){
@@ -572,26 +585,22 @@ public final class Analyser {
         }else {
             analyseCompareExpr();
             localInstructions.add(new Instruction(Operation.br_true, 1));
-        }//分析结构体
-        //TODO:break,continue,return
+        }
+
+        //分析结构体
+        //TODO:break,continue
         int judgeFalseOff = localInstructions.size();
         localInstructions.add(new Instruction(Operation.br,0));
         int judgeIndex = judgeFalseOff;
         expect(TokenType.L_BRACE);
         boolean[] bool = {false,false,false};
+        boolean isBreak = false;
 
+        ArrayList<Integer> breakOffset = new ArrayList<Integer>();
         while(checkNextIfStmt()){
-            bool = analyseStmt(true);
+            bool = analyseStmt(true,whileStartOff,breakOffset);
+            isBreak = bool[2];
             if (bool[0]||bool[1]||bool[2]){
-                //不在If里面的情况
-                if (bool[1]){
-                    if (isInIf) {
-                        int ContinueOff = localInstructions.size();
-                        localInstructions.add(new Instruction(Operation.br, whileStartOff - ContinueOff));
-                    }
-                } else if (bool[2]) {
-                    localInstructions.add(new Instruction(Operation.br,0));
-                }
                 break;
             }
         }
@@ -606,9 +615,16 @@ public final class Analyser {
             int whileEndOff = localInstructions.size();
             localInstructions.add(new Instruction(Operation.br,whileStartOff-whileEndOff));
         }
+
+
         int finishOff = localInstructions.size();
         localInstructions.get(judgeIndex).setX(finishOff-judgeFalseOff-1);
-        //结构体分析结束！
+
+        int nowOff = localInstructions.size()-1;
+        for (int tempOff:breakOffset){
+            localInstructions.get(tempOff).setX(nowOff-tempOff);
+        }
+
     }
     //    break_stmt -> 'break' ';'
     private void analyseBreakStmt() throws CompileError{
